@@ -1,6 +1,6 @@
 const Order = require("../models/Order");
-const Book = require("../models/Book");
-const User = require("../models/User");
+const Book = require("../models/Product");
+const Account = require("../models/Account");
 const mongoose = require("mongoose");
 
 const getAdminDashboardStats = async (req, res) => {
@@ -243,7 +243,7 @@ const getAdminDashboardStats = async (req, res) => {
     ]);
 
     const totalBooks = await Book.countDocuments();
-    const totalUsers = await User.countDocuments();
+    const totalUsers = await Account.countDocuments();
 
     return res.status(200).json({
       totalBooks,

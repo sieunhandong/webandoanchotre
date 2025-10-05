@@ -1,5 +1,5 @@
 const Feedback = require('../models/Feedback');
-const Book = require('../models/Book');
+const Book = require('../models/Product');
 
 // Hàm tính toán average rating
 const getAverageRating = async (bookId) => {

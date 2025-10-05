@@ -1,12 +1,10 @@
-const Book = require("../models/Book");
+const Product = require("../models/Product");
 const Category = require("../models/Category");
-const { applyDiscountCampaignsToBooks } = require("../utils/applyDiscount");
 // Lấy danh sách tất cả sách
-exports.getAllBooks = async (req, res) => {
+exports.getAllProducts = async (req, res) => {
   try {
-    const books = await Book.find().populate("categories");
-    const booksWithDiscount = await applyDiscountCampaignsToBooks(books);
-    res.status(200).json(booksWithDiscount);
+    const books = await Product.find().populate("category", "name");
+    res.status(200).json(books);
   } catch (error) {
     res
       .status(500)
@@ -15,116 +13,102 @@ exports.getAllBooks = async (req, res) => {
 };
 
 // Lấy thông tin một sách theo ID
-exports.getBookById = async (req, res) => {
+exports.getProductById = async (req, res) => {
   try {
-    const book = await Book.findById(req.params.id).populate("categories");
+    const book = await Product.findById(req.params.id).populate("categories");
 
     if (!book) return res.status(404).json({ message: "Không tìm thấy sách" });
-    const booksWithDiscount = await applyDiscountCampaignsToBooks([book]);
-    res.status(200).json(booksWithDiscount[0]);
+    res.status(200).json(book);
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi lấy sách", error: error.message });
   }
 };
 
-// Thêm sách mới với upload ảnh
-exports.createBook = async (req, res) => {
+// 🥦 Tạo sản phẩm mới
+exports.createProduct = async (req, res) => {
   try {
-    const { title, author } = req.body;
+    const { name, category, nutrition, description } = req.body;
 
-    if (!title || !author) {
-      return res
-        .status(400)
-        .json({ message: "Vui lòng nhập tiêu đề và tác giả." });
+    // Kiểm tra dữ liệu đầu vào
+    if (!name) {
+      return res.status(400).json({ message: "Vui lòng nhập tên sản phẩm." });
     }
 
-    let categories = [];
-    try {
-      categories = JSON.parse(req.body.categories);
-    } catch (err) {
-      return res.status(400).json({ message: "Danh mục không hợp lệ." });
+    // Kiểm tra danh mục tồn tại
+    const categoryExists = await Category.findById(category);
+    if (!categoryExists) {
+      return res.status(400).json({ message: "Danh mục không tồn tại!" });
     }
 
-    if (!Array.isArray(categories) || categories.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Vui lòng chọn ít nhất một danh mục." });
-    }
-
+    // Xử lý upload ảnh (từ multer)
     const imageUrls = req.files?.map((file) => file.path) || [];
 
-    const newBook = new Book({
-      ...req.body,
-      categories,
-      images: imageUrls,
+    // Tạo mới sản phẩm
+    const newProduct = new Product({
+      name,
+      category,
+      nutrition,
+      description,
+      image: imageUrls.length > 0 ? imageUrls[0] : null, // nếu có nhiều ảnh, bạn có thể lưu mảng
     });
 
-    await newBook.save();
-    res.status(201).json({ message: "Sách đã được tạo", newBook });
+    await newProduct.save();
+    res.status(201).json({ message: "Thêm sản phẩm thành công!", product: newProduct });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi khi tạo sách", error: error.message });
+    console.error("❌ Lỗi khi tạo sản phẩm:", error);
+    res.status(500).json({ message: "Lỗi khi tạo sản phẩm", error: error.message });
   }
 };
 
-// Cập nhật sách (thay ảnh nếu có upload mới)
-exports.updateBook = async (req, res) => {
-  try {
-    // Parse categories nếu có
-    let categories = undefined;
-    if (req.body.categories) {
-      try {
-        categories = JSON.parse(req.body.categories);
-        if (!Array.isArray(categories)) {
-          return res.status(400).json({ message: "Danh mục không hợp lệ." });
-        }
-      } catch (err) {
-        return res.status(400).json({ message: "Danh mục không hợp lệ." });
-      }
-    }
 
-    // Lấy danh sách ảnh mới nếu có
+
+// 🧩 Cập nhật sản phẩm
+exports.updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Lấy ảnh upload mới (nếu có)
     const imageUrls = req.files?.map((file) => file.path) || [];
 
-    // Tạo dữ liệu cập nhật
+    // Chuẩn bị dữ liệu cập nhật
     const updateData = {
       ...req.body,
-      categories,
     };
 
-    // Nếu có ảnh mới thì ghi đè ảnh cũ
+    // Nếu có ảnh mới thì cập nhật ảnh
     if (imageUrls.length > 0) {
-      updateData.images = imageUrls;
+      updateData.image = imageUrls[0];
     } else {
-      delete updateData.images; // tránh ghi đè images = [] nếu không có ảnh mới
+      delete updateData.image;
     }
 
-    const updatedBook = await Book.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    );
+    // Cập nhật sản phẩm
+    const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
 
-    if (!updatedBook) {
-      return res.status(404).json({ message: "Không tìm thấy sách" });
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm!" });
     }
 
-    res.status(200).json({ message: "Sách đã được cập nhật", updatedBook });
+    res.status(200).json({ message: "Cập nhật sản phẩm thành công!", product: updatedProduct });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Lỗi khi cập nhật sách", error: error.message });
+    console.error("❌ Lỗi khi cập nhật sản phẩm:", error);
+    res.status(500).json({ message: "Lỗi khi cập nhật sản phẩm", error: error.message });
   }
 };
 
-// Xóa sách theo ID
-exports.deleteBook = async (req, res) => {
+
+
+// 🗑️ Xóa sản phẩm
+exports.deleteProduct = async (req, res) => {
   try {
-    const deletedBook = await Book.findByIdAndDelete(req.params.id);
-    if (!deletedBook)
-      return res.status(404).json({ message: "Không tìm thấy sách" });
-    res.status(200).json({ message: "Sách đã được xóa" });
+    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+    if (!deletedProduct) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm!" });
+    }
+    res.status(200).json({ message: "Xóa sản phẩm thành công!" });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi khi xóa sách", error: error.message });
+    console.error("❌ Lỗi khi xóa sản phẩm:", error);
+    res.status(500).json({ message: "Lỗi khi xóa sản phẩm", error: error.message });
   }
 };
 

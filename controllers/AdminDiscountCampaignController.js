@@ -1,6 +1,6 @@
 // controllers/discountCampaignController.js
 const DiscountCampaign = require("../models/DiscountCampaign");
-const Book = require("../models/Book");
+const Book = require("../models/Product");
 
 // Tạo campaign mới
 exports.createCampaign = async (req, res) => {

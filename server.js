@@ -74,7 +74,7 @@ app.listen(port, () => {
   DB.connectDB();
 
   cron.schedule("0 0 * * *", () => {
-    console.log("[CRON] Checking and deactivating expired campaigns...");
+    // console.log("[CRON] Checking and deactivating expired campaigns...");
     autoDeactivateExpiredCampaigns();
   });
 });

@@ -1,5 +1,5 @@
 const Order = require("../models/Order");
-const Book = require("../models/Book");
+const Book = require("../models/Product");
 const Cart = require("../models/Cart");
 const Discount = require("../models/Discount");
 const User = require("../models/User");
@@ -52,20 +52,18 @@ const createOrder = async (req, res) => {
       items.push({
         book: book._id,
         quantity: item.quantity,
-        price: book.price, 
+        price: book.price,
       });
 
       itemsHtml += `
         <tr>
-          <td style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: left;">${
-            book.title
-          }</td>
-          <td style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: right;">${
-            item.quantity
-          }</td>
+          <td style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: left;">${book.title
+        }</td>
+          <td style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: right;">${item.quantity
+        }</td>
           <td style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: right;">${itemTotal.toLocaleString(
-            "vi-VN"
-          )} VND</td>
+          "vi-VN"
+        )} VND</td>
         </tr>`;
     }
 

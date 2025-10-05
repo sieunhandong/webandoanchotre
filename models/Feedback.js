@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const feedbackSchema = new mongoose.Schema({
     book: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Book',
+        ref: 'Product',
         required: true
     },
     user: {

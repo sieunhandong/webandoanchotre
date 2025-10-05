@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
     point: { type: Number, default: 0 },
     googleId: String,
     facebookId: String,
-    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Book" }],
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     role: { type: String, enum: ["user", "admin"], default: "user" },
     isActivated: { type: Boolean, default: true },
     accessToken: { type: String, default: null, select: true },

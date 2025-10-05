@@ -65,7 +65,7 @@ const discountSchema = new mongoose.Schema(
     productIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Book", 
+        ref: "Product",
       },
     ],
   },

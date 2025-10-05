@@ -294,7 +294,7 @@ router.post("/refresh-token", authController.refreshToken);
  *       500:
  *         description: Lỗi hệ thống
  */
-router.post("/change-password", checkAuthorize(["user"]), authController.changePassword);
+router.post("/change-password", checkAuthorize(["customer"]), authController.changePassword);
 
 /**
  * @swagger

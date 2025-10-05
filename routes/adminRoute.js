@@ -40,33 +40,25 @@ router.post(
 router.post("/orders/confirm/:id", checkAuthorize(["admin"]), confirmOrder);
 
 //Quản lý sách
-router.get(
-  "/books",
-  checkAuthorize(["admin"]),
-  adminBookController.getAllBooks
-);
-router.get(
-  "/books/:id",
-  checkAuthorize(["admin"]),
-  adminBookController.getBookById
-);
+router.get("/products", checkAuthorize(["admin"]), adminBookController.getAllProducts);
+router.get("/products/:id", checkAuthorize(["admin"]), adminBookController.getAllProducts);
 router.post(
-  "/books",
+  "/products",
   checkAuthorize(["admin"]),
   uploadMultiple, // middleware upload ảnh
-  adminBookController.createBook
+  adminBookController.createProduct
 );
 
 router.put(
-  "/books/:id",
+  "/products/:id",
   checkAuthorize(["admin"]),
   uploadMultiple, // hỗ trợ cập nhật ảnh mới
-  adminBookController.updateBook
+  adminBookController.updateProduct
 );
 router.delete(
-  "/books/:id",
+  "/products/:id",
   checkAuthorize(["admin"]),
-  adminBookController.deleteBook
+  adminBookController.deleteProduct
 );
 
 //Quản lý danh mục sách

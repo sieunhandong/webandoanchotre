@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const userController = require("../controllers/UserController");
 const { checkAuthorize } = require("../middleware/authMiddleware");
-
+const quizController = require("../controllers/QuizController");
 /**
  * @swagger
  * tags:
@@ -279,5 +279,5 @@ router.post("/complaint", checkAuthorize(["user"]), userController.addComplaint)
  *         description: Lỗi server
  */
 router.delete("/complaint/:complaintId", checkAuthorize(["user"]), userController.cancelComplaint);
-
+router.post("/customer/profile", checkAuthorize(["customer"]), quizController.createOrUpdateProfile);
 module.exports = router;

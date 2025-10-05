@@ -13,9 +13,11 @@ const ghnRoutes = require("./ghnRoute");
 const paymentRoutes = require("./paymentRoute");
 const reviewRoutees = require("./reviewRoute");
 const commnetRoutes = require("./commnetRoute");
+const quizRoutes = require("./quizRoute");
 const routes = (app) => {
   app.use("/auth", authRoutes);
-  app.use("/book", bookRoutes);
+  app.use("/quiz", quizRoutes);
+  app.use("/product", bookRoutes);
   app.use("/admin", adminRoutes);
   app.use("/user", userRoutes);
   app.use("/cart", cartRoutes);

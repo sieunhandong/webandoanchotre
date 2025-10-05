@@ -1,4 +1,4 @@
-const User = require("../models/User");
+const Account = require("../models/Account");
 const jwt = require("jsonwebtoken");
 
 const checkAuthorize = (roles = []) => async (req, res, next) => {
@@ -14,7 +14,7 @@ const checkAuthorize = (roles = []) => async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
-    const user = await User.findById(decoded.id);
+    const user = await Account.findById(decoded.id);
     if (!user) {
       return res.status(401).json({ message: "Người dùng không tồn tại!" });
     }

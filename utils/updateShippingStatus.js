@@ -38,10 +38,10 @@ const syncShippingStatuses = async () => {
       trackingNumber: { $exists: true, $ne: null },
     });
 
-    console.log(`Bắt đầu đồng bộ ${pendingOrders.length} đơn hàng từ GHN...`);
+    // console.log(`Bắt đầu đồng bộ ${pendingOrders.length} đơn hàng từ GHN...`);
 
     for (const order of pendingOrders) {
-      console.log(order.trackingNumber);
+      // console.log(order.trackingNumber);
       try {
         const ghn = await getGhnTracking(order.trackingNumber);
         const status = ghn?.status?.toLowerCase?.() || "unknown";
@@ -70,23 +70,23 @@ const syncShippingStatuses = async () => {
 
         await order.save();
 
-        console.log(`Order ${order._id} ➜ ${status} (${statusDesc})`);
+        // console.log(`Order ${order._id} ➜ ${status} (${statusDesc})`);
         if (
           order.paymentStatus === "Completed" &&
           ["delivery_fail", "returned", "cancel", "lost", "damage"].includes(
             status
           )
         ) {
-          console.log(
-            `→ Đơn ${order._id} đang thất bại, hoàn sách lại vào kho...`
-          );
+          // console.log(
+          //   `→ Đơn ${order._id} đang thất bại, hoàn sách lại vào kho...`
+          // );
 
           for (const item of order.items) {
             const book = await Book.findById(item.book._id);
             if (book) {
               book.stock += item.quantity;
               await book.save();
-              console.log(`   ↳ +${item.quantity} sách: ${book.title}`);
+              // console.log(`   ↳ +${item.quantity} sách: ${book.title}`);
             }
           }
         }
@@ -95,7 +95,7 @@ const syncShippingStatuses = async () => {
       }
     }
 
-    console.log("CRON GHN hoàn tất.\n");
+    // console.log("CRON GHN hoàn tất.\n");
   } catch (err) {
     console.error("Lỗi CRON GHN:", err);
   }
@@ -103,6 +103,6 @@ const syncShippingStatuses = async () => {
 
 // Chạy cron mỗi 2 phút
 cron.schedule("*/1 * * * *", () => {
-  console.log("CRON: Cập nhật shippingStatus từ GHN...");
+  // console.log("CRON: Cập nhật shippingStatus từ GHN...");
   syncShippingStatuses();
 });

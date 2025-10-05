@@ -15,9 +15,9 @@ cron.schedule("0 0 * * *", async () => {
         orderStatus: "Cancelled",
       }
     );
-    console.log(
-      `[CRON] Đã hủy ${result.modifiedCount} đơn hàng hết hạn thanh toán`
-    );
+    // console.log(
+    //   `[CRON] Đã hủy ${result.modifiedCount} đơn hàng hết hạn thanh toán`
+    // );
   } catch (error) {
     console.error("[CRON] Lỗi khi hủy đơn:", error.message);
   }

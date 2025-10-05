@@ -1,4 +1,4 @@
-const Book = require("../models/Book");
+const Book = require("../models/Product");
 const Category = require("../models/Category");
 const Order = require("../models/Order");
 const { applyDiscountCampaignsToBooks } = require("../utils/applyDiscount");
@@ -26,11 +26,10 @@ const getBookById = async (req, res) => {
 
 const getBookByCategory = async (req, res) => {
   try {
-    const books = await Book.find({ categories: req.params.id });
+    const books = await Book.find({ category: req.params.id });
     if (books.length === 0)
       return res.status(404).json({ message: "Không tìm thấy sách" });
-    const booksWithDiscount = await applyDiscountCampaignsToBooks(books);
-    res.status(200).json(booksWithDiscount);
+    res.status(200).json(books);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server!", error: error.message });
   }
@@ -99,7 +98,7 @@ const getBestSellers = async (req, res) => {
       { $unwind: "$items" },
       { $group: { _id: "$items.book", totalQuantity: { $sum: "$items.quantity" } } },
       { $sort: { totalQuantity: -1 } },
-      { 
+      {
         $lookup: {
           from: "books",
           localField: "_id",
@@ -108,7 +107,7 @@ const getBestSellers = async (req, res) => {
         }
       },
       { $unwind: "$bookDetails" },
-      { 
+      {
         $replaceRoot: {
           newRoot: { $mergeObjects: ["$bookDetails", { totalQuantity: "$totalQuantity" }] }
         }

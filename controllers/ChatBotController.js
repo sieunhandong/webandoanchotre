@@ -1,5 +1,5 @@
 require('dotenv').config();
-const Book = require('../models/Book');
+const Book = require('../models/Product');
 
 const getSuggestions = async (req, res) => {
     const { query } = req.body;

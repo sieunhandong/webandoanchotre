@@ -1,30 +1,30 @@
 const Cart = require("../models/Cart");
-const Book = require("../models/Book");
+const Book = require("../models/Product");
 const { applyDiscountCampaignsToBooks } = require("../utils/applyDiscount");
 const getCart = async (req, res) => {
-  try {
-    const cart = await Cart.findOne({ user: req.user._id }).populate(
-      "cartItems.book"
-    );
+    try {
+        const cart = await Cart.findOne({ user: req.user._id }).populate(
+            "cartItems.book"
+        );
 
-    if (!cart) {
-      return res
-        .status(200)
-        .json({ message: "Giỏ hàng trống!", cartItems: [] });
+        if (!cart) {
+            return res
+                .status(200)
+                .json({ message: "Giỏ hàng trống!", cartItems: [] });
+        }
+
+        const books = cart.cartItems.map((item) => item.book);
+        const discountedBooks = await applyDiscountCampaignsToBooks(books);
+
+        const updatedCartItems = cart.cartItems.map((item, index) => ({
+            ...item.toObject(),
+            book: discountedBooks[index],
+        }));
+
+        res.status(200).json({ cartItems: updatedCartItems });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi server!", error: error.message });
     }
-
-    const books = cart.cartItems.map((item) => item.book);
-    const discountedBooks = await applyDiscountCampaignsToBooks(books);
-
-    const updatedCartItems = cart.cartItems.map((item, index) => ({
-      ...item.toObject(),
-      book: discountedBooks[index],
-    }));
-
-    res.status(200).json({ cartItems: updatedCartItems });
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server!", error: error.message });
-  }
 };
 const addBookToCart = async (req, res) => {
     try {

@@ -1,7 +1,7 @@
 require("dotenv").config();
 const axios = require("axios");
 const Order = require("../models/Order");
-const Book = require("../models/Book");
+const Book = require("../models/Product");
 const { GHN_API_URL, GHN_TOKEN, GHN_SHOP_ID, GHN_SERVICE_TYPE_NHE } =
   process.env;
 const getProvince = async (req, res) => {
@@ -253,7 +253,7 @@ const returnOrder = async (req, res) => {
     }
 
     const ghn = await getGhnTracking(order.trackingNumber);
-    
+
     const status = ghn.status?.toLowerCase();
 
     const ALLOWED_RETURN_STATUSES = [
@@ -282,7 +282,7 @@ const returnOrder = async (req, res) => {
       }
     );
 
-    
+
     order.isReturned = true;
     await order.save();
 

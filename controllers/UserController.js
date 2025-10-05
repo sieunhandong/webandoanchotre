@@ -1,4 +1,4 @@
-const Book = require("../models/Book");
+const Book = require("../models/Product");
 const Complaint = require("../models/Complaint");
 const User = require("../models/User");
 // profile

@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 const bcrypt = require("bcryptjs");
 const otpGenerator = require("otp-generator");
 const sendEmail = require("../utils/sendMail");
-const User = require("../models/User");
+const Account = require("../models/Account");
 const generateToken = require("../utils/generalToken");
 const verifyEmail = require("../utils/verifyMail");
 const validateUtils = require("../utils/validateInput");
@@ -13,6 +13,7 @@ let otpStore = {};
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const sendOtp = async (req, res) => {
+  console.log("🚀 sendOtp called:", req.body);  // <--- thêm log này
   const { type, email } = req.body;
   try {
     const errMsg = validateUtils.validateEmail(email);
@@ -23,11 +24,11 @@ const sendOtp = async (req, res) => {
       return res.status(400).json({ message: "Loại OTP không hợp lệ!" });
     }
     if (type === "register") {
-      const userExists = await User.findOne({ email });
+      const userExists = await Account.findOne({ email });
       if (userExists)
         return res.status(400).json({ message: "Email đã tồn tại!" });
     } else if (type === "reset-password") {
-      const user = await User.findOne({ email });
+      const user = await Account.findOne({ email });
       if (!user)
         return res.status(400).json({ message: "Email không tồn tại!" });
     }
@@ -60,7 +61,8 @@ const sendOtp = async (req, res) => {
         }!`,
     });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi hệ thống!" });
+    console.log(error);
+    res.status(500).json({ message: error.message });
   }
 };
 const verifyOtp = (req, res) => {
@@ -105,11 +107,11 @@ const refreshToken = async (req, res) => {
       });
     });
     // Đối chiếu token trong DB (bảo mật hơn)
-    const user = await User.findById(decoded.id);
+    const user = await Account.findById(decoded.id);
     if (!user || user.refreshToken !== token) {
       return res.status(403).json({
         status: "ERR",
-        message: "Invalid refresh token or user",
+        message: "Invalid refresh token or Account",
       });
     }
 
@@ -162,12 +164,12 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
+    const newUser = new Account({
       name,
       email,
       password: hashedPassword,
       phone,
-      role: "user",
+      role: "customer",
     });
     await newUser.save();
 
@@ -194,7 +196,7 @@ const resetPassword = async (req, res) => {
   }
 
   // // Xóa OTP sau khi sử dụng
-  delete otpStore[email]["resetPassword"];
+  delete otpStore[email]["reset-password"];
 
   const errMsg = validateUtils.validatePassword(newPassword);
   if (errMsg !== null) {
@@ -203,7 +205,7 @@ const resetPassword = async (req, res) => {
   // Cập nhật mật khẩu mới
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   try {
-    await User.updateOne({ email }, { password: hashedPassword });
+    await Account.updateOne({ email }, { password: hashedPassword });
     res.status(200).json({ message: "Mật khẩu đã được cập nhật thành công!" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi hệ thống!" });
@@ -212,7 +214,7 @@ const resetPassword = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email }).select("+password");
+    const user = await Account.findOne({ email }).select("+password");
     if (!user) return res.status(400).json({ message: "Email không tồn tại!" });
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -253,7 +255,7 @@ const changePassword = async (req, res) => {
 
   try {
     // Lấy lại user từ DB và chỉ định lấy trường password
-    const userFromDB = await User.findById(req.user._id).select('+password');
+    const userFromDB = await Account.findById(req.user._id).select('+password');
 
     if (!userFromDB) {
       return res.status(404).json({ message: "Người dùng không tồn tại!" });
@@ -294,15 +296,15 @@ const googleLogin = async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, sub: googleId } = payload;
 
-    let user = await User.findOne({ email });
+    let user = await Account.findOne({ email });
 
     if (!user) {
-      user = new User({
+      user = new Account({
         email,
         name,
         googleId,
         isActivated: true,
-        role: "user",
+        role: "customer",
       });
       await user.save();
     } else if (!user.googleId) {
@@ -358,7 +360,7 @@ const facebookLogin = async (req, res) => {
       });
     }
 
-    let user = await User.findOne({ email });
+    let user = await Account.findOne({ email });
 
     if (user) {
       if (!user.facebookId) {
@@ -366,12 +368,12 @@ const facebookLogin = async (req, res) => {
         await user.save();
       }
     } else {
-      user = new User({
+      user = new Account({
         name,
         email,
         facebookId,
         isActivated: true,
-        role: "user",
+        role: "customer",
       });
       await user.save();
     }
@@ -383,7 +385,7 @@ const facebookLogin = async (req, res) => {
     const accessTokenLogin = generateToken.genneralAccessToken(tokenPayload);
     const refreshToken = generateToken.genneralRefreshToken(tokenPayload);
 
-    user.accessToken = accessToken;
+    user.accessToken = accessTokenLogin;
     user.refreshToken = refreshToken;
     await user.save();
 
