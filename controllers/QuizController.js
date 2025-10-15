@@ -450,45 +450,18 @@ exports.step7 = async (req, res) => {
         await order.save();
 
         // ==========================
-        // 7️⃣ Tạo URL thanh toán VNPAY
+        // 7️⃣ Tạo link QR Sepay
         // ==========================
-        const ipAddr =
-            req.headers["x-forwarded-for"] ||
-            req.connection.remoteAddress ||
-            req.socket.remoteAddress ||
-            "127.0.0.1";
+        // Ví dụ link: https://qr.sepay.vn/img?acc=VQRQAEQNT2617&bank=MBBank&amount=100000&des=DH102969
+        const sepayAccount = process.env.SEPAY_ACC || "VQRQAEQNT2617";
+        const sepayBank = process.env.SEPAY_BANK || "MBBank";
+        const orderCode = "DH" + moment().format("MMDD") + order._id.toString().slice(-6);
 
-        let vnp_Params = {
-            vnp_Version: "2.1.0",
-            vnp_Command: "pay",
-            vnp_TmnCode: process.env.VNP_TMNCODE,
-            vnp_Locale: "vn",
-            vnp_CurrCode: "VND",
-            vnp_TxnRef:
-                moment().format("YYYYMMDDHHmmss") + "_" + order._id,
-            vnp_OrderInfo: order._id.toString(),
-            vnp_OrderType: "Thanh toan don hang",
-            vnp_Amount: Math.round(amount) * 100,
-            vnp_ReturnUrl: process.env.VNP_RETURNURL,
-            vnp_IpAddr: ipAddr,
-            vnp_CreateDate: moment().format("YYYYMMDDHHmmss"),
-        };
+        const paymentUrl = `https://qr.sepay.vn/img?acc=${sepayAccount}&bank=${sepayBank}&amount=${amount}&des=${orderCode}`;
 
-        vnp_Params = sortObject(vnp_Params);
-
-        const signData = qs.stringify(vnp_Params, { encode: false });
-        const hmac = crypto.createHmac("sha512", process.env.VNP_HASHSECRET);
-        const signed = hmac
-            .update(Buffer.from(signData, "utf-8"))
-            .digest("hex");
-        vnp_Params["vnp_SecureHash"] = signed;
-
-        const paymentUrl = `${process.env.VNP_URL}?${qs.stringify(
-            vnp_Params,
-            { encode: false }
-        )}`;
-
-        order.vnpayPaymentUrl = paymentUrl;
+        // lưu URL QR để hiển thị sau này (nếu cần)
+        order.paymentUrl = paymentUrl;
+        order.orderCode = orderCode;
         await order.save();
 
         // ==========================
@@ -514,49 +487,100 @@ exports.step7 = async (req, res) => {
         });
     }
 };
-
 exports.getPaymentReturn = async (req, res) => {
     try {
-        let vnp_Params = req.query;
-        const secureHash = vnp_Params["vnp_SecureHash"];
-        const orderId = vnp_Params["vnp_OrderInfo"];
+        const data = req.body;
 
-        // Add await here
-        const order = await Order.findById(orderId)
+        console.log("📩 Webhook SePay nhận:", data);
+
+        // ✅ 1. Chỉ xử lý giao dịch tiền vào
+        if (data.transferType !== "in") {
+            return res.status(200).json({ message: "Bỏ qua giao dịch không hợp lệ." });
+        }
+
+        // ✅ 2. Lấy nội dung chuyển khoản (VD: "DH102969")
+        const transferContent = (data.content || "").trim().toUpperCase();
+
+        if (!transferContent) {
+            return res.status(400).json({ message: "Thiếu nội dung giao dịch." });
+        }
+
+        // ✅ 3. Tìm đơn hàng có mã tương ứng
+        const order = await Order.findOne({ orderCode: transferContent });
+
         if (!order) {
-            return res.status(404).json({ message: `Order ${orderId} không tồn tại` });
+            console.warn("⚠️ Không tìm thấy đơn hàng cho nội dung:", transferContent);
+            return res.status(200).json({ message: "Không tìm thấy đơn hàng phù hợp." });
         }
 
-        delete vnp_Params["vnp_SecureHash"];
-        delete vnp_Params["vnp_SecureHashType"];
-
-        vnp_Params = sortObject(vnp_Params);
-
-        // Kiểm tra chữ ký
-        const signData = qs.stringify(vnp_Params, { encode: false });
-        const hmac = crypto.createHmac("sha512", process.env.VNP_HASHSECRET);
-
-        const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-
-        if (secureHash === signed) {
-            if (vnp_Params["vnp_ResponseCode"] === "00") {
-                // Update order first
-                order.paymentStatus = "completed";
-                await order.save()
-
-                // Then send response
-                return res.status(200).json({ message: "Thanh toán thành công!", status: "success" });
-
-            } else {
-                return res.status(400).json({ message: "Thanh toán thất bại!", status: "fail" });
-            }
-        } else {
-            return res.status(400).json({ message: "Sai chữ ký bảo mật!" });
+        // ✅ 4. Nếu đã thanh toán thì bỏ qua
+        if (order.paymentStatus === "completed") {
+            return res.status(200).json({ message: "Đơn hàng đã được thanh toán trước đó." });
         }
+
+        // ✅ 5. Kiểm tra số tiền có khớp không
+        if (Number(data.transferAmount) < order.total) {
+            console.warn("⚠️ Số tiền không khớp:", data.transferAmount, "vs", order.total);
+            return res.status(200).json({ message: "Số tiền thanh toán không đủ." });
+        }
+
+        // ✅ 6. Cập nhật trạng thái thanh toán
+        order.paymentStatus = "completed";
+        order.status = "completed";
+        order.paymentIntentId = data.referenceCode || data.id?.toString();
+        await order.save();
+
+        console.log(`✅ Đơn hàng ${order.orderCode} đã thanh toán thành công.`);
+
+        // ✅ 7. Phản hồi cho SePay
+        res.status(200).json({ message: "Cập nhật thanh toán thành công." });
     } catch (error) {
-        return res.status(500).json({ message: "Lỗi server!", error: error.message });
+        console.error("❌ Lỗi xử lý webhook SePay:", error);
+        res.status(500).json({ message: "Lỗi server", error: error.message });
     }
 };
+// exports.getPaymentReturn = async (req, res) => {
+//     try {
+//         let vnp_Params = req.query;
+//         const secureHash = vnp_Params["vnp_SecureHash"];
+//         const orderId = vnp_Params["vnp_OrderInfo"];
+
+//         // Add await here
+//         const order = await Order.findById(orderId)
+//         if (!order) {
+//             return res.status(404).json({ message: `Order ${orderId} không tồn tại` });
+//         }
+
+//         delete vnp_Params["vnp_SecureHash"];
+//         delete vnp_Params["vnp_SecureHashType"];
+
+//         vnp_Params = sortObject(vnp_Params);
+
+//         // Kiểm tra chữ ký
+//         const signData = qs.stringify(vnp_Params, { encode: false });
+//         const hmac = crypto.createHmac("sha512", process.env.VNP_HASHSECRET);
+
+//         const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+
+//         if (secureHash === signed) {
+//             if (vnp_Params["vnp_ResponseCode"] === "00") {
+//                 // Update order first
+//                 order.paymentStatus = "completed";
+//                 await order.save()
+
+//                 // Then send response
+//                 return res.status(200).json({ message: "Thanh toán thành công!", status: "success" });
+
+//             } else {
+//                 return res.status(400).json({ message: "Thanh toán thất bại!", status: "fail" });
+//             }
+//         } else {
+//             return res.status(400).json({ message: "Sai chữ ký bảo mật!" });
+//         }
+//     } catch (error) {
+//         return res.status(500).json({ message: "Lỗi server!", error: error.message });
+//     }
+// };
 
 
 // Thêm vào cuối QuizController.js

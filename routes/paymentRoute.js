@@ -118,7 +118,7 @@ router.post("/create", paymentController.createPayment);
  *       500:
  *         description: Lỗi server
  */
-router.get("/return", QuizController.getPaymentReturn);
+router.post("/return", QuizController.getPaymentReturn);
 
 
 module.exports = router;

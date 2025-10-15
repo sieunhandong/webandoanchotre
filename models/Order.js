@@ -24,7 +24,17 @@ const orderSchema = new mongoose.Schema({
   },
   status: { type: String, enum: ['pending', 'completed', 'cancelled'], default: 'pending' },
   paymentStatus: { type: String, enum: ['pending', 'completed', 'cancelled'], default: 'pending' },
-  paymentIntentId: { type: String },
+  // 🔹 ID giao dịch Sepay(nếu có callback)
+  sepayTransactionId: { type: String },
+
+  // 🔹 Mã mô tả đơn hàng gửi lên Sepay (VD: "DH102969")
+  orderCode: { type: String, unique: true },
+
+  // 🔹 Link QR Sepay (dễ truy cập lại nếu cần)
+  sepayQrUrl: { type: String },
+
+  // 🔹 Thời điểm thanh toán (khi nhận callback hoặc admin xác nhận)
+  paidAt: { type: Date },
   mealSuggestions: [
     {
       day: { type: Number, required: true },
