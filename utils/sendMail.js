@@ -39,7 +39,7 @@ const sendEmail = async (email, data, type) => {
       subject = "Xác nhận đơn hàng thành công";
     }
     const mailOptions = {
-      from: `"Minh Hương " <${process.env.EMAIL_USER}>`, // Hiển thị tên thương hiệu
+      from: `"TinyYummy " <${process.env.EMAIL_USER}>`, // Hiển thị tên thương hiệu
       to: email,
       subject,
       html: emailHtml,

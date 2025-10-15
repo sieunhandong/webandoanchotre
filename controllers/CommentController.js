@@ -1,11 +1,11 @@
 const Comment = require('../models/Comment');
-const Review = require('../models/Review');
+const Blog = require('../models/Blog');
 
 const createComment = async (req, res) => {
     try {
         const { reviewId, content } = req.body;
 
-        const review = await Review.findById(reviewId);
+        const review = await Blog.findById(reviewId);
         if (!review) return res.status(404).json({ message: "Không tìm thấy review" });
 
         const comment = await Comment.create({

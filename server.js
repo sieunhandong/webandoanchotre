@@ -1,7 +1,5 @@
 // Load environment variables from .env file
 require("dotenv").config();
-require("./utils/cancelExpiredOrders");
-require("./utils/updateShippingStatus");
 const express = require("express");
 const cors = require("cors");
 const routes = require("./routes");
@@ -9,10 +7,7 @@ const cookieParser = require("cookie-parser");
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const cron = require("node-cron");
-
-const {
-  autoDeactivateExpiredCampaigns,
-} = require("./controllers/AdminDiscountCampaignController");
+const autoCompleteOrders = require("./utils/autoCompleteOrders");
 
 const DB = require("./config/db");
 
@@ -49,6 +44,8 @@ const swaggerOptions = {
   },
   apis: ["./routes/*.js"],
 };
+const testRoute = require("./routes/testRoute");
+app.use("/test", testRoute);
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.get("/swagger.json", (req, res) => {
@@ -73,8 +70,10 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
   DB.connectDB();
 
+
+  // ✅ Cron mới: kiểm tra đơn hàng đã hết hạn để hoàn tất
   cron.schedule("0 0 * * *", () => {
-    // console.log("[CRON] Checking and deactivating expired campaigns...");
-    autoDeactivateExpiredCampaigns();
+    console.log("[CRON] Auto completing finished orders...");
+    autoCompleteOrders();
   });
 });

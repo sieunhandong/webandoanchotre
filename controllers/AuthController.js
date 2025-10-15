@@ -13,7 +13,6 @@ let otpStore = {};
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const sendOtp = async (req, res) => {
-  console.log("🚀 sendOtp called:", req.body);  // <--- thêm log này
   const { type, email } = req.body;
   try {
     const errMsg = validateUtils.validateEmail(email);
@@ -61,7 +60,6 @@ const sendOtp = async (req, res) => {
         }!`,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -129,7 +127,6 @@ const refreshToken = async (req, res) => {
       access_token,
     });
   } catch (e) {
-    console.log(e);
     return res.status(401).json({
       status: "ERR",
       message: "Invalid or expired token",
@@ -169,7 +166,7 @@ const register = async (req, res) => {
       email,
       password: hashedPassword,
       phone,
-      role: "customer",
+      role: "user",
     });
     await newUser.save();
 
@@ -244,6 +241,7 @@ const login = async (req, res) => {
       message: "Đăng nhập thành công",
       accessToken,
       role: user.role,
+      userName: user.name
     });
   } catch (error) {
     res.status(500).json({ message: "Lỗi hệ thống!" });
@@ -336,6 +334,7 @@ const googleLogin = async (req, res) => {
       accessToken,
       role: user.role,
       email: user.email,
+      userName: user.name
     });
   } catch (error) {
     console.error("Lỗi googleLogin:", error);

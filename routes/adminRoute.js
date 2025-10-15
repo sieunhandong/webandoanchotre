@@ -4,12 +4,15 @@ const { uploadMultiple } = require("../config/cloudinary");
 const adminController = require("../controllers/AdminController");
 const adminBookController = require("../controllers/AdminBookController");
 const adminFeedbackController = require("../controllers/AdminFeedBackController");
-const adminDiscountCampaignController = require("../controllers/AdminDiscountCampaignController");
-const adminDiscountController = require("../controllers/AdminDiscountController");
 const adminDashboardController = require("../controllers/AdminDashBoardController");
 const adminComplaintController = require("../controllers/AdminComplaintController");
-const { confirmOrder } = require("../controllers/GhnController");
+const mealSetController = require("../controllers/MealSetController");
+const mealPlanController = require("../controllers/MealPlanController");
+const FoodController = require("../controllers/AdminFoodController");
+const BlogController = require("../controllers/BlogController");
+
 const router = express.Router();
+
 
 //Quản lý user
 router.get("/users", checkAuthorize(["admin"]), adminController.getAllUsers);
@@ -27,17 +30,18 @@ router.put(
 
 //Quản lý đơn hàng
 router.get("/orders", checkAuthorize(["admin"]), adminController.getAllOrders);
-router.put(
-  "/orders/:id/change-status",
-  checkAuthorize(["admin"]),
-  adminController.updateOrderStatus
-);
 router.post(
-  "/orders/update-box-info/:id",
+  "/orders/:id/ai-suggest",
   checkAuthorize(["admin"]),
-  adminController.updateBoxInfo
+  adminController.suggestMealByAI
 );
-router.post("/orders/confirm/:id", checkAuthorize(["admin"]), confirmOrder);
+router.put(
+  "/orders/:id/update-menu",
+  checkAuthorize(["admin"]),
+  adminController.updateMealMenu
+);
+router.put("/orders/update-meal-done", checkAuthorize(["admin"]), adminController.updateMealDone);
+
 
 //Quản lý sách
 router.get("/products", checkAuthorize(["admin"]), adminBookController.getAllProducts);
@@ -104,82 +108,7 @@ router.get(
   checkAuthorize(["admin"]),
   adminFeedbackController.getFeedbacksByUser
 );
-//Quản lý chiến dịch giảm giá
-router.get(
-  "/discount-campaigns",
-  checkAuthorize(["admin"]),
-  adminDiscountCampaignController.getAllCampaigns
-);
-router.delete(
-  "/discount-campaigns/:id",
-  checkAuthorize(["admin"]),
-  adminDiscountCampaignController.deleteCampaign
-);
-router.post(
-  "/discount-campaigns",
-  checkAuthorize(["admin"]),
-  adminDiscountCampaignController.createCampaign
-);
-router.put(
-  "/discount-campaigns/:id",
-  checkAuthorize(["admin"]),
-  adminDiscountCampaignController.updateCampaign
-);
 
-router.post(
-  "/discount-campaigns/check-book-conflicts",
-  checkAuthorize(["admin"]),
-  adminDiscountCampaignController.checkBookConflicts
-);
-router.post(
-  "/discount-campaigns/check-book-conflicts-preview",
-  checkAuthorize(["admin"]),
-  adminDiscountCampaignController.checkBookConflictsPreview
-);
-
-
-
-//Quản lý discount
-router.get(
-  "/discounts",
-  checkAuthorize(["admin"]),
-  adminDiscountController.getAllDiscounts
-);
-router.get(
-  "/discounts/:id",
-  checkAuthorize(["admin"]),
-  adminDiscountController.getDiscountById
-);
-router.post(
-  "/discounts",
-  checkAuthorize(["admin"]),
-  adminDiscountController.createDiscount
-);
-router.put(
-  "/discounts/:id",
-  checkAuthorize(["admin"]),
-  adminDiscountController.updatedDiscount
-);
-router.put(
-  "/discounts/:id/change-status",
-  checkAuthorize(["admin"]),
-  adminDiscountController.changeStatusDiscount
-);
-router.delete(
-  "/discounts/:id",
-  checkAuthorize(["admin"]),
-  adminDiscountController.deleteDiscount
-);
-router.patch(
-  "/discounts/:id/products",
-  checkAuthorize(["admin"]),
-  adminDiscountController.updateDiscountProducts
-);
-router.delete(
-  "/discounts/:discountId/books/:bookId",
-  checkAuthorize(["admin"]),
-  adminDiscountController.removeBookFromDiscount
-);
 
 // Quản lý khiếu nại
 router.get(
@@ -199,5 +128,35 @@ router.get(
   checkAuthorize(["admin"]),
   adminDashboardController.getAdminDashboardStats
 );
+//blog
+router.post("/blog/", checkAuthorize(["admin"]), uploadMultiple, BlogController.createBlog);
+
+router.put("/blog/:id", checkAuthorize(["admin"]), BlogController.updateBlog);
+
+router.delete("/blog/:id", checkAuthorize(["admin"]), BlogController.deleteBlog);
+router.get("/blog/", BlogController.getAllBlogsByAdmin);
+
+
+
+
+// Cập nhật món ăn (chỉ admin)
+router.put("/food/:id", checkAuthorize(["admin"]), uploadMultiple, FoodController.updateFood);
+
+// Xóa món ăn (chỉ admin)
+router.delete("/food/:id", checkAuthorize(["admin"]), FoodController.deleteFood);
+
+// Tạo món ăn (chỉ admin)
+router.post("/food", checkAuthorize(["admin"]), uploadMultiple, FoodController.createFood);
+
+// Lấy tất cả món ăn (có thể tìm kiếm theo name)
+router.get("/food", FoodController.getAllFoods);
+
+
+router.post("/mealsets", checkAuthorize(["admin"]), mealSetController.createMealSet);   // tạo set ăn
+router.get("/mealsets", checkAuthorize(["admin"]), mealSetController.getAllMealSetsByAmin);                   // lấy tất cả
+router.get("/mealsets/:id", checkAuthorize(["admin"]), mealSetController.getMealSetByIdByAdmin);               // chi tiết 1 set
+router.put("/mealsets/:id", checkAuthorize(["admin"]), mealSetController.updateMealSet); // update
+router.delete("/mealsets/:id", checkAuthorize(["admin"]), mealSetController.deleteMealSet); // xóa
+router.get("/mealplans", mealPlanController.getMealSuggestions);
 
 module.exports = router;

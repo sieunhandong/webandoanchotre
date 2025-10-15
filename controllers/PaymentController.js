@@ -6,7 +6,6 @@ const VNP_HASHSECRET = process.env.VNP_HASHSECRET;
 const VNP_URL = process.env.VNP_URL;
 const VNP_RETURNURL = process.env.VNP_RETURNURL;
 const Order = require("../models/Order");
-const Discount = require("../models/Discount");
 const sortObject = (obj) => {
     let sorted = {};
     let str = [];
@@ -121,11 +120,6 @@ const getPaymentReturn = async (req, res) => {
                 order.paymentStatus = "Completed";
                 await order.save();
 
-                // Update usedCount of discount
-                if (order.discountUsed) {
-                    const discountId = order.discountUsed._id;
-                    await Discount.findByIdAndUpdate(discountId, { $inc: { usedCount: 1 } }, { new: true });
-                }
 
                 // Then send response
                 return res.status(200).json({ message: "Thanh toán thành công!", status: "success" });

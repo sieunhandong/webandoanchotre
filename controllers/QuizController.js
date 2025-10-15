@@ -21,7 +21,6 @@ exports.startQuiz = async (req, res) => {
         await session.save();
         res.json({ success: true, data: { sessionId, step: 1 } });
     } catch (error) {
-        console.log(error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -30,7 +29,6 @@ exports.startQuiz = async (req, res) => {
 exports.step1 = async (req, res) => {
     try {
         const { sessionId } = req.body;
-        console.log(req.body);
         const { age, weight, allergies } = req.body;
         if (!sessionId || !age || !weight || !allergies) return res.status(400).json({ message: 'Thiếu dữ liệu' });
 
@@ -126,47 +124,48 @@ exports.step4 = async (req, res) => {
     try {
         const { sessionId } = req.body;
         const session = await QuizSession.findOne({ sessionId }).populate({
-            path: 'data.selectedProducts',
-            populate: { path: 'category' },
+            path: "data.selectedProducts",
+            populate: { path: "category" },
         });
-        // if (!session || session.step !== 4) return res.status(400).json({ message: 'Bước không hợp lệ' });
+
+        if (!session) return res.status(404).json({ message: "Không tìm thấy session" });
 
         // Lấy thông tin từ session
         const { age, weight, allergies, feedingMethod, selectedProducts } = session.data;
         let selectedList = [];
         if (selectedProducts?.length) {
             const products = await Product.find({ _id: { $in: selectedProducts } });
-            selectedList = products.map(p => `- ${p.name} (${p.category?.name || "Không rõ danh mục"})`);
+            selectedList = products.map(
+                (p) => `- ${p.name} (${p.category?.name || "Không rõ danh mục"})`
+            );
         }
 
-        // Tạo prompt AI với yêu cầu rõ ràng hơn
+        // --- Prompt mới, thêm “Bữa sáng ăn...” và “Bữa tối ăn...” ---
         const prompt = `
 Thông tin trẻ:
 - Tháng tuổi: ${age || 0}
 - Cân nặng: ${weight || 0} kg
-- Phương pháp ăn dặm: ${feedingMethod || 'traditional'}
+- Phương pháp ăn dặm: ${feedingMethod || "traditional"}
 - Dị ứng: ${allergies?.length ? allergies.join(", ") : "Không có"}
 - Nguyên liệu sẵn có: ${selectedList.length ? selectedList.join(", ") : "Chưa chọn"}
 
 Yêu cầu:
-- Hãy gợi ý thực đơn ăn dặm cho CHÍNH XÁC 7 ngày dựa trên thông tin trên.
-- Mỗi ngày 1 bữa chính, mô tả món và lý do tại sao phù hợp.
+- Hãy gợi ý thực đơn ăn dặm cho CHÍNH XÁC 7 ngày, mỗi ngày 2 bữa (sáng và tối).
+- Mỗi bữa chỉ cần tên món ăn, KHÔNG cần lý do.
 - Loại bỏ nguyên liệu có trong danh sách dị ứng.
-- ƯU TIÊN SỬ DỤNG CÁC NGUYÊN LIỆU TRONG 'NGUYÊN LIỆU SẴN CÓ'. Nếu không đủ, có thể bổ sung các nguyên liệu an toàn khác phù hợp với phương pháp ăn dặm và thông tin trẻ.
-- Kết quả PHẢI là một chuỗi JSON hợp lệ TRONG MỘT DÒNG DUY NHẤT, KHÔNG CÓ VĂN BẢN THỪA, KHÔNG XUỐNG DÒNG.
-- Định dạng: 
+- ƯU TIÊN sử dụng các nguyên liệu trong “Nguyên liệu sẵn có”.
+- Kết quả PHẢI là JSON hợp lệ TRONG MỘT DÒNG DUY NHẤT.
+- Trong mảng "meals", mỗi phần tử phải có định dạng:
+  "Bữa sáng ăn <tên món>", "Bữa tối ăn <tên món>"
+- Ví dụ mẫu:
 [
-  { "day": 1, "menu": "Cháo bí đỏ nấu thịt gà", "reason": "Giúp bổ sung vitamin A, dễ tiêu hóa" },
-  { "day": 2, "menu": "Cháo cà rốt cá hồi", "reason": "Giàu omega-3, phát triển não" },
-  { "day": 3, "menu": "Súp khoai lang nghiền", "reason": "Giúp bé dễ tiêu hóa" },
-  { "day": 4, "menu": "Cháo yến mạch chuối", "reason": "Ngủ ngon và nhiều năng lượng" },
-  { "day": 5, "menu": "Cháo rau củ thịt bò", "reason": "Cung cấp sắt và chất xơ" },
-  { "day": 6, "menu": "Bánh khoai tây hấp trứng", "reason": "Giàu protein và xơ" },
-  { "day": 7, "menu": "Cháo bí xanh tôm", "reason": "Giúp mát gan, dễ ăn" }
+  { "day": 1, "meals": ["Bữa sáng ăn Cháo bí đỏ thịt gà", "Bữa tối ăn Súp cà rốt thịt bò"] },
+  { "day": 2, "meals": ["Bữa sáng ăn Cháo cá hồi rau củ", "Bữa tối ăn Bánh khoai tây hấp"] },
+  ...
+  { "day": 7, "meals": ["Bữa sáng ăn Cháo yến mạch táo", "Bữa tối ăn Cháo rau dền tôm"] }
 ]
-    `;
+`;
 
-        console.log("⚙️ Prompt gửi AI:\n", prompt);
 
         let aiText = "";
         let suggestions = [];
@@ -182,48 +181,55 @@ Yêu cầu:
             });
 
             aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            console.log("✅ AI Response:\n", aiText);
         } catch (err) {
             console.warn("⚠️ Không thể gọi Gemini, fallback dữ liệu mẫu:", err.message);
             aiText = JSON.stringify([
-                { day: 1, menu: "Cháo bí đỏ thịt bò", reason: "Dễ tiêu, giàu vitamin A (fallback)" },
-                { day: 2, menu: "Cháo khoai lang cá thu", reason: "Giàu omega-3, phát triển não (fallback)" },
-                { day: 3, menu: "Súp bí xanh nghiền", reason: "Giúp bé dễ tiêu hóa (fallback)" },
-                { day: 4, menu: "Cháo yến mạch táo", reason: "Ngủ ngon và nhiều năng lượng (fallback)" },
-                { day: 5, menu: "Cháo rau bina thịt lợn", reason: "Cung cấp sắt và chất xơ (fallback)" },
-                { day: 6, menu: "Bánh khoai tây hấp", reason: "Giàu xơ (fallback)" },
-                { day: 7, menu: "Cháo mồng tơi tôm", reason: "Giúp mát gan, dễ ăn (fallback)" },
+                { day: 1, meals: ["Bữa sáng ăn Cháo bí đỏ thịt bò", "Bữa tối ăn Súp khoai lang cá hồi"] },
+                { day: 2, meals: ["Bữa sáng ăn Cháo cà rốt thịt gà", "Bữa tối ăn Cháo yến mạch chuối"] },
+                { day: 3, meals: ["Bữa sáng ăn Cháo rau củ cá thu", "Bữa tối ăn Cháo khoai tây trứng"] },
+                { day: 4, meals: ["Bữa sáng ăn Cháo tôm rau dền", "Bữa tối ăn Súp bí xanh"] },
+                { day: 5, meals: ["Bữa sáng ăn Cháo cá lóc cà rốt", "Bữa tối ăn Cháo bí đỏ thịt heo"] },
+                { day: 6, meals: ["Bữa sáng ăn Cháo yến mạch táo", "Bữa tối ăn Cháo rau bina trứng"] },
+                { day: 7, meals: ["Bữa sáng ăn Cháo tôm khoai lang", "Bữa tối ăn Súp rau củ nghiền"] },
             ]);
         }
 
-        // --- Xử lý dữ liệu trả về ---
+        // --- Làm sạch và parse dữ liệu ---
         try {
-            // Sử dụng regex để trích xuất JSON hợp lệ
-            const jsonMatch = aiText.match(/\[[\s\S]*?\]/); // Lấy toàn bộ nội dung trong dấu []
-            if (jsonMatch) {
-                const jsonText = jsonMatch[0].replace(/\s+/g, ' ').trim(); // Loại bỏ khoảng trắng thừa
-                suggestions = JSON.parse(jsonText);
-                // Đảm bảo chỉ lấy 7 ngày
-                if (suggestions.length > 7) suggestions = suggestions.slice(0, 7);
-            } else {
-                throw new Error("Không tìm thấy JSON hợp lệ");
-            }
-        } catch (e) {
-            console.warn("⚠️ AI không trả về JSON hợp lệ, fallback sang text parse:", e.message);
-            suggestions = aiText.split("\n").map((line, i) => ({
+            let cleanedText = aiText
+                .replace(/```json|```/gi, "")
+                .replace(/[\u200B-\u200D\uFEFF]/g, "")
+                .replace(/\r?\n|\r/g, " ")
+                .trim();
+
+            const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
+            if (!jsonMatch) throw new Error("Không tìm thấy JSON trong phản hồi");
+
+            const jsonText = jsonMatch[0];
+            suggestions = JSON.parse(jsonText);
+
+            if (!Array.isArray(suggestions) || !suggestions.length)
+                throw new Error("Dữ liệu JSON không hợp lệ");
+
+            suggestions = suggestions.slice(0, 7);
+        } catch (err) {
+            console.warn("⚠️ AI không trả về JSON hợp lệ, fallback sang text parse:", err.message);
+            suggestions = Array.from({ length: 7 }).map((_, i) => ({
                 day: i + 1,
-                menu: line.trim() || `Món ăn ngày ${i + 1} (fallback)`,
-                reason: "Không rõ lý do",
-            })).slice(0, 7); // Chỉ lấy 7 ngày
+                meals: [
+                    `Bữa sáng ăn Món sáng ${i + 1}`,
+                    `Bữa tối ăn Món tối ${i + 1}`,
+                ],
+            }));
         }
-        console.log("✅ Suggested menu before save:\n", suggestions);
+
 
         // --- Lưu vào QuizSession ---
-        session.data.mealSuggestions = suggestions; // Gán dữ liệu
-        session.markModified('data.mealSuggestions'); // Đánh dấu thay đổi trong nested object
+        session.data.mealSuggestions = suggestions;
+        session.markModified("data.mealSuggestions");
         session.step = 5;
-        const savedSession = await session.save(); // Lưu và lấy lại session
-        console.log("✅ Session saved successfully. Saved mealSuggestions:", savedSession.data.mealSuggestions);
+
+        const savedSession = await session.save();
 
         res.json({
             success: true,
@@ -242,7 +248,6 @@ exports.step5 = async (req, res) => {
     try {
         const { sessionId } = req.body;
         const { selectedSet } = req.body;
-        console.log(req.body, selectedSet);
         const set = await Set.findById(selectedSet);
         if (!set) return res.status(404).json({ message: 'Set không tồn tại' });
 
@@ -326,37 +331,42 @@ exports.step6 = async (req, res) => {
 // Step 7: Thanh toán
 
 const sortObject = (obj) => {
-    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-        console.error('sortObject: Input is not a valid object', obj);
-        return {};
-    }
-
-    let sorted = {};
-    let str = [];
-    let key;
-    for (key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            str.push(encodeURIComponent(key));
-        }
-    }
-    str.sort();
-    for (key = 0; key < str.length; key++) {
-        sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, '+');
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
+    const sorted = {};
+    const keys = Object.keys(obj).sort();
+    for (const key of keys) {
+        sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, '+');
     }
     return sorted;
 };
 exports.step7 = async (req, res) => {
     try {
-        const { sessionId } = req.body;
-        const { deliveryTime, address } = req.body;
+        const { sessionId, deliveryTime, address } = req.body;
 
-        let session = await QuizSession.findOne({ sessionId });
-        // if (!session || session.step !== 7) return res.status(400).json({ message: 'Bước không hợp lệ' });
+        // ==========================
+        // 1️⃣ Tìm phiên quiz
+        // ==========================
+        const session = await QuizSession.findOne({ sessionId });
+        if (!session)
+            return res
+                .status(404)
+                .json({ success: false, message: "Không tìm thấy phiên quiz" });
 
+        // ==========================
+        // 2️⃣ Yêu cầu đăng nhập
+        // ==========================
         if (!req.user) {
-            return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để thanh toán', redirect: '/login?redirect=/quiz/step7&sessionId=' + sessionId });
+            return res.status(401).json({
+                success: false,
+                message: "Vui lòng đăng nhập để thanh toán",
+                redirect:
+                    "/login?redirect=/quiz/step7&sessionId=" + sessionId,
+            });
         }
 
+        // ==========================
+        // 3️⃣ Cập nhật thông tin session
+        // ==========================
         session.userId = req.user.id;
         session.data.delivery = {
             time: deliveryTime,
@@ -372,60 +382,93 @@ exports.step7 = async (req, res) => {
         };
         await session.save();
 
-        // Tính tổng tiền chỉ dựa trên giá của selectedSet
-        let amount = session.data.selectedSet.price || 0;
+        // ==========================
+        // 4️⃣ Cập nhật hoặc tạo UserProfile cơ bản
+        // (chỉ lưu thông tin em bé + địa chỉ, KHÔNG lưu mealSuggestions nữa)
+        // ==========================
+        let userProfile = await UserProfile.findOne({ accountId: req.user.id });
+        if (!userProfile) {
+            userProfile = new UserProfile({ accountId: req.user.id });
+        }
 
-        const orderData = {
-            userId: session.userId,
-            quizSessionId: session._id,
-            items: [{
-                setId: session.data.selectedSet.setId,
-                duration: session.data.selectedSet.duration,
-                price: session.data.selectedSet.price,
-                quantity: 1,
-            }],
-            total: amount,
-            delivery: session.data.delivery,
-            status: 'pending',
+        userProfile.babyInfo = {
+            age: Number(session.data.age) || null,
+            weight: Number(session.data.weight) || null,
+            allergies: session.data.allergies || [],
+            feedingMethod: session.data.feedingMethod || "traditional",
         };
 
-        const order = new Order(orderData);
-        await order.save();
+        if (session.data.delivery?.address) {
+            userProfile.address = {
+                ...session.data.delivery.address,
+                isDefault: true,
+            };
+        }
 
-        const account = await Account.findById(req.user.userId);
+        if (session.data.selectedProducts?.length) {
+            userProfile.selectedProducts = session.data.selectedProducts;
+        }
+
+        await userProfile.save();
+        const account = await Account.findById(req.user.id);
         if (account && !account.userInfo) {
-            const userProfile = await UserProfile.findOne({ accountId: req.user.userId }) || new UserProfile({ accountId: req.user.userId });
-            if (!userProfile.address.address) {
-                userProfile.address = {
-                    address: address.address,
-                    provinceId: address.provinceId,
-                    provinceName: address.provinceName,
-                    districtId: address.districtId,
-                    districtName: address.districtName,
-                    wardCode: address.wardCode,
-                    wardName: address.wardName,
-                };
-            }
-            if (session.data.mealSuggestions) {
-                userProfile.mealSuggestions = session.data.mealSuggestions;
-            }
-            await userProfile.save();
             account.userInfo = userProfile._id;
             await account.save();
         }
+        // ==========================
+        // 5️⃣ Chuẩn bị mealSuggestions cho đơn hàng
+        // ==========================
+        let mealSuggestions = [];
+        if (session.data.mealSuggestions?.length) {
+            mealSuggestions = session.data.mealSuggestions.map((m) => ({
+                day: m.day,
+                menu: m.meals.join(", "),
+            }));
+        }
 
-        // Tạo URL thanh toán VNPAY
-        let ipAddr = req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress || '127.0.0.1';
+        // ==========================
+        // 6️⃣ Tạo Order
+        // ==========================
+        const amount = session.data.selectedSet?.price || 0;
+
+        const order = new Order({
+            userId: req.user.id,
+            items: [
+                {
+                    setId: session.data.selectedSet?.setId,
+                    duration: session.data.selectedSet?.duration,
+                    price: session.data.selectedSet?.price,
+                    quantity: 1,
+                },
+            ],
+            total: amount,
+            delivery: session.data.delivery,
+            mealSuggestions, // ✅ Lưu thực đơn riêng cho đơn hàng này
+            paymentStatus: "pending",
+        });
+
+        await order.save();
+
+        // ==========================
+        // 7️⃣ Tạo URL thanh toán VNPAY
+        // ==========================
+        const ipAddr =
+            req.headers["x-forwarded-for"] ||
+            req.connection.remoteAddress ||
+            req.socket.remoteAddress ||
+            "127.0.0.1";
+
         let vnp_Params = {
             vnp_Version: "2.1.0",
             vnp_Command: "pay",
             vnp_TmnCode: process.env.VNP_TMNCODE,
             vnp_Locale: "vn",
             vnp_CurrCode: "VND",
-            vnp_TxnRef: moment().format("YYYYMMDDHHmmss") + "_" + order._id, // Mã giao dịch duy nhất
-            vnp_OrderInfo: `Thanh toan don hang ${order._id}`,
-            vnp_OrderType: "other",
-            vnp_Amount: Math.round(amount) * 100, // Convert VND to VNPAY format
+            vnp_TxnRef:
+                moment().format("YYYYMMDDHHmmss") + "_" + order._id,
+            vnp_OrderInfo: order._id.toString(),
+            vnp_OrderType: "Thanh toan don hang",
+            vnp_Amount: Math.round(amount) * 100,
             vnp_ReturnUrl: process.env.VNP_RETURNURL,
             vnp_IpAddr: ipAddr,
             vnp_CreateDate: moment().format("YYYYMMDDHHmmss"),
@@ -433,33 +476,88 @@ exports.step7 = async (req, res) => {
 
         vnp_Params = sortObject(vnp_Params);
 
-        // Tạo chữ ký bảo mật
         const signData = qs.stringify(vnp_Params, { encode: false });
         const hmac = crypto.createHmac("sha512", process.env.VNP_HASHSECRET);
-        const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+        const signed = hmac
+            .update(Buffer.from(signData, "utf-8"))
+            .digest("hex");
         vnp_Params["vnp_SecureHash"] = signed;
 
-        // Tạo link thanh toán
-        const paymentUrl = `${process.env.VNP_URL}?${qs.stringify(vnp_Params, { encode: false })}`;
+        const paymentUrl = `${process.env.VNP_URL}?${qs.stringify(
+            vnp_Params,
+            { encode: false }
+        )}`;
 
-        // Lưu URL thanh toán vào Order
         order.vnpayPaymentUrl = paymentUrl;
         await order.save();
 
+        // ==========================
+        // 8️⃣ Xoá session tạm
+        // ==========================
         await session.deleteOne();
 
+        // ==========================
+        // ✅ Phản hồi client
+        // ==========================
         res.json({
             success: true,
             data: {
-                paymentUrl: paymentUrl, // URL để redirect đến VNPAY (hiển thị QR)
-                orderId: order._id
+                paymentUrl,
+                orderId: order._id,
             },
         });
     } catch (error) {
         console.error("❌ Lỗi khi xử lý thanh toán VNPAY:", error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
     }
 };
+
+exports.getPaymentReturn = async (req, res) => {
+    try {
+        let vnp_Params = req.query;
+        const secureHash = vnp_Params["vnp_SecureHash"];
+        const orderId = vnp_Params["vnp_OrderInfo"];
+
+        // Add await here
+        const order = await Order.findById(orderId)
+        if (!order) {
+            return res.status(404).json({ message: `Order ${orderId} không tồn tại` });
+        }
+
+        delete vnp_Params["vnp_SecureHash"];
+        delete vnp_Params["vnp_SecureHashType"];
+
+        vnp_Params = sortObject(vnp_Params);
+
+        // Kiểm tra chữ ký
+        const signData = qs.stringify(vnp_Params, { encode: false });
+        const hmac = crypto.createHmac("sha512", process.env.VNP_HASHSECRET);
+
+        const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+
+        if (secureHash === signed) {
+            if (vnp_Params["vnp_ResponseCode"] === "00") {
+                // Update order first
+                order.paymentStatus = "completed";
+                await order.save()
+
+                // Then send response
+                return res.status(200).json({ message: "Thanh toán thành công!", status: "success" });
+
+            } else {
+                return res.status(400).json({ message: "Thanh toán thất bại!", status: "fail" });
+            }
+        } else {
+            return res.status(400).json({ message: "Sai chữ ký bảo mật!" });
+        }
+    } catch (error) {
+        return res.status(500).json({ message: "Lỗi server!", error: error.message });
+    }
+};
+
 
 // Thêm vào cuối QuizController.js
 exports.getStepData = async (req, res) => {
@@ -501,48 +599,6 @@ exports.getStepData = async (req, res) => {
     }
 };
 
-exports.getPaymentReturn = async (req, res) => {
-    try {
-        let vnp_Params = req.query;
-        const secureHash = vnp_Params["vnp_SecureHash"];
-        const txnRef = vnp_Params["vnp_TxnRef"]; // Lấy vnp_TxnRef
-
-        // Trích xuất orderId từ vnp_TxnRef (phần sau dấu "_")
-        const orderId = txnRef.split("_")[1];
-
-        const order = await Order.findById(orderId);
-        if (!order) {
-            return res.status(404).json({ message: `Order ${orderId} không tồn tại` });
-        }
-
-        delete vnp_Params["vnp_SecureHash"];
-        delete vnp_Params["vnp_SecureHashType"];
-
-        vnp_Params = sortObject(vnp_Params);
-
-        // Kiểm tra chữ ký
-        const signData = qs.stringify(vnp_Params, { encode: false });
-        const hmac = crypto.createHmac("sha512", process.env.VNP_HASHSECRET);
-        const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-
-        if (secureHash === signed) {
-            if (vnp_Params["vnp_ResponseCode"] === "00") {
-                order.status = "completed";
-                await order.save();
-
-                return res.status(200).json({ message: "Thanh toán thành công!", status: "success" });
-            } else {
-                return res.status(400).json({ message: "Thanh toán thất bại!", status: "fail" });
-            }
-        } else {
-            return res.status(400).json({ message: "Sai chữ ký bảo mật!" });
-        }
-    } catch (error) {
-        return res.status(500).json({ message: "Lỗi server!", error: error.message });
-    }
-};
-
-
 exports.getMealSuggestions = async (req, res) => {
     try {
         const { profile } = req.body;
@@ -582,7 +638,6 @@ Yêu cầu:
 ]
     `;
 
-        console.log("⚙️ Prompt gửi AI:\n", prompt);
 
         let aiText = "";
         let suggestions = [];

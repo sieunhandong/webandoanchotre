@@ -2,33 +2,33 @@ const mongoose = require("mongoose");
 
 const UserProfileSchema = new mongoose.Schema({
     accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true }, // ai sở hữu profile này
-
-    monthAge: { type: Number, required: true }, // tháng tuổi
-    height: { type: Number, required: true },   // cm
-    weight: { type: Number, required: true },   // kg
-    gender: { type: String, enum: ["male", "female"], required: true },
-    method: {
-        type: String,
-        enum: ["traditional", "blw", "mixed"],
-        required: true
+    babyInfo: {
+        age: { type: Number },
+        weight: { type: Number },
+        allergies: [{ type: String }],
+        feedingMethod: {
+            type: String,
+            enum: ["traditional", "blw", "japanese"],
+            required: true
+        },
     },
-    likes: [{ type: String }],
-    allergies: [{ type: String }],
-    dislikes: [{ type: String }],
+    address: {
+        address: { type: String }, // số nhà, đường
+        provinceId: { type: Number },
+        provinceName: { type: String },
+        districtId: { type: Number },
+        districtName: { type: String },
+        wardCode: { type: String },
+        wardName: { type: String },
+        isDefault: { type: Boolean, default: false }, // Đánh dấu địa chỉ mặc định
+    },
     selectedProducts: [
         {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Product", // hoặc Product, tùy schema bạn đang dùng
+            ref: "Product",
         },
     ],
-    mealSuggestions: [
-        {
-            day: Number,
-            menu: String,
-            reason: String,
-        },
-    ],
-
+    isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model("UserProfile", UserProfileSchema);

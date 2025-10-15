@@ -25,28 +25,6 @@ exports.createMealSet = async (req, res) => {
     }
 };
 
-// Lấy danh sách tất cả set ăn
-exports.getAllMealSets = async (req, res) => {
-    try {
-        const sets = await MealSet.find().sort({ createdAt: -1 });
-        res.json({ success: true, data: sets });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Không thể lấy danh sách set ăn", error: error.message });
-    }
-};
-
-// Lấy chi tiết 1 set ăn theo ID
-exports.getMealSetById = async (req, res) => {
-    try {
-        const set = await MealSet.findById(req.params.id);
-        if (!set) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy set ăn" });
-        }
-        res.json({ success: true, data: set });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Không thể lấy chi tiết set ăn", error: error.message });
-    }
-};
 
 // Cập nhật set ăn
 exports.updateMealSet = async (req, res) => {
@@ -64,12 +42,60 @@ exports.updateMealSet = async (req, res) => {
 // Xóa set ăn
 exports.deleteMealSet = async (req, res) => {
     try {
-        const set = await MealSet.findByIdAndDelete(req.params.id);
+        const set = await MealSet.findByIdAndUpdate(
+            req.params.id,
+            { isActive: false },
+            { new: true }
+        );
+
         if (!set) {
             return res.status(404).json({ success: false, message: "Không tìm thấy set ăn" });
         }
-        res.json({ success: true, message: "Xóa set ăn thành công" });
+
+        res.json({ success: true, message: "Đã ẩn set ăn (isActive = false)", data: set });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Không thể xóa set ăn", error: error.message });
+        res.status(500).json({ success: false, message: "Không thể cập nhật set ăn", error: error.message });
+    }
+};
+
+// Lấy danh sách tất cả set ăn by admin 
+exports.getAllMealSetsByAmin = async (req, res) => {
+    try {
+        const sets = await MealSet.find().sort({ createdAt: -1 });
+        res.json({ success: true, data: sets });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Không thể lấy danh sách set ăn", error: error.message });
+    }
+};
+
+// Lấy chi tiết 1 set ăn theo ID
+exports.getMealSetByIdByAdmin = async (req, res) => {
+    try {
+        const set = await MealSet.findById(req.params.id);
+        if (!set) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy set ăn" });
+        }
+        res.json({ success: true, data: set });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Không thể lấy chi tiết set ăn", error: error.message });
+    }
+};
+exports.getMealSetById = async (req, res) => {
+    try {
+        const set = await MealSet.findById({ _id: req.params.id, isActive: true });
+        if (!set) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy set ăn" });
+        }
+        res.json({ success: true, data: set });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Không thể lấy chi tiết set ăn", error: error.message });
+    }
+};
+exports.getAllMealSets = async (req, res) => {
+    try {
+        const sets = await MealSet.find({ isActive: true }).sort({ createdAt: -1 });
+        res.json({ success: true, data: sets });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Không thể lấy danh sách set ăn", error: error.message });
     }
 };

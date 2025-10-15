@@ -279,5 +279,4 @@ router.post("/complaint", checkAuthorize(["user"]), userController.addComplaint)
  *         description: Lỗi server
  */
 router.delete("/complaint/:complaintId", checkAuthorize(["user"]), userController.cancelComplaint);
-router.post("/customer/profile", checkAuthorize(["customer"]), quizController.createOrUpdateProfile);
 module.exports = router;

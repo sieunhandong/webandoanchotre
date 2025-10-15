@@ -1,11 +1,11 @@
 const Order = require("../models/Order");
 const Book = require("../models/Product");
-const Cart = require("../models/Cart");
-const Discount = require("../models/Discount");
 const User = require("../models/User");
+const UserProfile = require("../models/UserProfile");
 const sendEmail = require("../utils/sendMail");
-const { applyDiscountCampaignsToBooks } = require("../utils/applyDiscount");
-
+const moment = require("moment");
+const dotenv = require("dotenv");
+dotenv.config();
 const createOrder = async (req, res) => {
   try {
     const cart = await Cart.findOne({ user: req.user.id });
@@ -17,22 +17,18 @@ const createOrder = async (req, res) => {
     const items = [];
     const { shippingInfo, paymentMethod, discountUsed, pointUsed } = req.body;
 
-    const discount = discountUsed
-      ? await Discount.findById(discountUsed)
-      : null;
     const userId = req.user.id;
 
     // Lấy sách và áp dụng giảm giá
     const bookIds = cart.cartItems.map((item) => item.book);
     const books = await Book.find({ _id: { $in: bookIds } });
-    const discountedBooks = await applyDiscountCampaignsToBooks(books);
 
     // Tính tổng tiền
     let totalAmount = 0;
     let itemsHtml = "";
 
     for (const item of cart.cartItems) {
-      const book = discountedBooks.find(
+      const book = books.find(
         (b) => b._id.toString() === item.book.toString()
       );
       if (!book) {
@@ -138,56 +134,79 @@ const createOrder = async (req, res) => {
 
 async function getMyOrders(req, res) {
   try {
-    const orders = await Order.find({ user: req.user._id })
-      .populate("items.book", "title images price")
+    // 🔹 Lấy tất cả đơn hàng của người dùng
+    const orders = await Order.find({ userId: req.user._id })
+      .populate("items.setId", "title price duration")
       .sort({ createdAt: -1 });
-    return res.json({ data: orders });
+
+    // 🔹 Duyệt từng đơn hàng để thêm tiến trình + thực đơn tương ứng
+    const enrichedOrders = orders.map((order) => {
+      if (!order.delivery?.time || !order.items?.length) return order;
+
+      const startDate = moment(order.delivery.time).startOf("day");
+      const today = moment().startOf("day");
+      const duration = order.items[0].duration || 0;
+
+      const diffDays = today.diff(startDate, "days") + 1;
+      let currentDay = diffDays;
+
+      if (currentDay < 1) currentDay = 0; // chưa bắt đầu
+      if (currentDay > duration) currentDay = duration; // đã hoàn tất
+
+      // 🔹 Lấy thực đơn trong Order.mealSuggestions
+      let todayMenu = null;
+      if (order.mealSuggestions?.length) {
+        const found = order.mealSuggestions.find(
+          (m) => Number(m.day) === Number(currentDay)
+        );
+        if (found) todayMenu = found.menu;
+      }
+
+      return {
+        ...order.toObject(),
+        progress: {
+          startDate: startDate.format("YYYY-MM-DD"),
+          duration,
+          currentDay,
+          isStarted: currentDay > 0,
+          isCompleted: currentDay >= duration,
+          todayMenu,
+        },
+      };
+    });
+
+    return res.json({ data: enrichedOrders });
   } catch (err) {
-    console.error(err);
+    console.error("❌ getMyOrders error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 }
 
+
 async function getOrderDetails(req, res) {
   const orderId = req.params.id;
   const user = req.user;
+
   try {
     const order = await Order.findById(orderId)
-      .populate("items.book", "title images price")
-      .populate("discountUsed", "code amount");
+      .populate("items.setId", "title price duration");
 
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
+
+    // Kiểm tra quyền truy cập
     if (
-      order.user.toString() !== user._id.toString() &&
+      order.userId.toString() !== user._id.toString() &&
       user.role !== "admin"
     ) {
-      return res.status(403).json({ message: "Forbidden" });
+      return res.status(403).json({ message: "Bạn không có quyền xem đơn này" });
     }
 
     return res.status(200).json({ data: order });
   } catch (error) {
-    console.error(error);
+    console.error("❌ getOrderDetails error:", error);
     return res.status(500).json({ message: error.message });
-  }
-}
-async function cancelOrder(req, res) {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order)
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-
-    if (order.paymentStatus !== "Pending" || order.orderStatus !== "Pending") {
-      return res.status(400).json({ message: "Đơn hàng không thể hủy" });
-    }
-
-    order.orderStatus = "Cancelled";
-    await order.save();
-
-    res.json({ message: "Đã hủy đơn hàng" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
   }
 }
 
@@ -195,5 +214,4 @@ module.exports = {
   createOrder,
   getMyOrders,
   getOrderDetails,
-  cancelOrder,
 };

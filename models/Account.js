@@ -11,11 +11,11 @@ const accountSchema = new mongoose.Schema({
     facebookId: String,
     role: {
         type: String,
-        enum: ["customer", "admin"],
-        default: "customer",
+        enum: ["user", "admin"],
+        default: "user",
     },
     isActivated: { type: Boolean, default: true },
-
+    orders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Order' }],
     accessToken: { type: String, default: null },
     refreshToken: { type: String, default: null }
 }, { timestamps: true });

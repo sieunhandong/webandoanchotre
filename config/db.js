@@ -1,20 +1,34 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Category = require("../models/Category");
-const Book = require("../models/Product");
-const Cart = require("../models/Cart");
+const Product = require("../models/Product");
 const Order = require("../models/Order");
 const Feedback = require("../models/Feedback");
 const Complaint = require("../models/Complaint");
+const UserProfile = require("../models/UserProfile");
+const Account = require("../models/Account");
+const BlogCategory = require("../models/BlogCategory");
+const Blog = require("../models/Blog");
+const Comment = require("../models/Comment");
+const Food = require("../models/Food");
+const MealSet = require("../models/MealSet");
+const QuizSession = require("../models/QuizSession");
 
 const DB = {
   user: User,
   category: Category,
-  book: Book,
-  cart: Cart,
+  product: Product,
+  userProfile: UserProfile,
   order: Order,
   feedback: Feedback,
   complaint: Complaint,
+  account: Account,
+  blogCategory: BlogCategory,
+  blog: Blog,
+  comment: Comment,
+  food: Food,
+  mealSet: MealSet,
+  quizSession: QuizSession
 };
 
 DB.connectDB = async () => {

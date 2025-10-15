@@ -4,59 +4,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mã Xác Thực OTP</title>
+    <title>Mã Xác Thực OTP - TinyYummy</title>
 </head>
 
 <body
-    style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 20px; margin: 0; color: #333;">
+    style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5fdff 0%, #e8f7ff 100%); padding: 20px; margin: 0; color: #333;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-        style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e9ecef;">
+        style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(116, 206, 242, 0.15); border: 1px solid #e0f7ff;">
+        <!-- Header -->
         <tr>
-            <td style="background: #C49A6C; padding: 30px 20px; text-align: center;">
-                <span style="font-size: 36px; color: #ffffff; font-weight: 600;">Minh Hương</span>
-                <h1 style="color: #ffffff; font-size: 24px; margin: 10px 0 0;">{{TITLE}}</h1>
+            <td
+                style="background: linear-gradient(135deg, #74CEF2 0%, #8BD8F5 100%); padding: 40px 20px; text-align: center; position: relative; overflow: hidden;">
+                <div
+                    style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,0.1);">
+                </div>
+                <div
+                    style="position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.1);">
+                </div>
+
+                <span
+                    style="font-size: 36px; color: #ffffff; font-weight: 700; display: block; margin-bottom: 10px; position: relative; z-index: 1;">🍎
+                    TinyYummy</span>
+                <h1
+                    style="color: #ffffff; font-size: 24px; margin: 10px 0 0; font-weight: 600; position: relative; z-index: 1;">
+                    {{TITLE}}</h1>
             </td>
         </tr>
+
+        <!-- Content -->
         <tr>
-            <td style="padding: 30px 20px;">
-                <p style="font-size: 16px; color: #2c3e50; margin: 0 0 20px;">Chào bạn,</p>
-                <p style="font-size: 14px; color: #5a6c7d; margin: 0 0 20px;">Chúng tôi đã nhận được yêu cầu xác thực
-                    tài khoản của bạn. Vui lòng sử dụng mã OTP bên dưới:</p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <span style="font-size: 14px; color: #7f8c8d; text-transform: uppercase;">Mã xác thực của
-                        bạn</span><br>
-                    <span
-                        style="font-family: 'Courier New', monospace; font-size: 28px; color: #ffffff; background: #C49A6C; padding: 15px 30px; display: inline-block; letter-spacing: 4px;">{{OTP}}</span>
-                </div>
-                <p style="text-align: center; font-size: 14px; color: #e74c3c; margin: 20px 0;">⏰ Mã này sẽ hết hạn sau
-                    <strong>5 phút</strong>
+            <td style="padding: 40px 30px;">
+                <!-- Greeting -->
+                <p style="font-size: 16px; color: #2c3e50; margin: 0 0 20px; font-weight: 500;">Xin chào ba mẹ thân mến,
                 </p>
+                <p style="font-size: 15px; color: #5a6c7d; margin: 0 0 25px; line-height: 1.6;">Chúng tôi đã nhận được
+                    yêu cầu xác thực tài khoản của bạn. Vui lòng sử dụng mã OTP bên dưới để tiếp tục:</p>
+
+                <!-- OTP Code -->
+                <div style="text-align: center; margin: 40px 0;">
+                    <span
+                        style="font-size: 14px; color: #74CEF2; text-transform: uppercase; font-weight: 600; letter-spacing: 1px;">Mã
+                        xác thực của bạn</span>
+                    <br>
+                    <div style="margin: 15px 0;">
+                        <span
+                            style="font-family: 'Courier New', monospace; font-size: 32px; color: #ffffff; background: linear-gradient(135deg, #74CEF2 0%, #8BD8F5 100%); padding: 18px 40px; display: inline-block; letter-spacing: 6px; border-radius: 12px; font-weight: 700; box-shadow: 0 5px 15px rgba(116, 206, 242, 0.3);">
+                            {{OTP}}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Timer -->
+                <p style="text-align: center; font-size: 14px; color: #e74c3c; margin: 25px 0; font-weight: 500;">
+                    ⏰ Mã này sẽ hết hạn sau <strong>5 phút</strong>
+                </p>
+
+                <!-- Security Note -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                    style="background: #fef9e7; border: 1px solid #f39c12; padding: 15px; margin: 20px 0;">
+                    style="background: #f0f9ff; border: 2px solid #74CEF2; border-radius: 12px; padding: 20px; margin: 25px 0;">
                     <tr>
-                        <td style="font-size: 14px; color: #d68910;">
-                            <strong>Lưu ý bảo mật:</strong> Vui lòng không chia sẻ mã OTP này với bất kỳ ai.
+                        <td style="font-size: 14px; color: #2c5282;">
+                            <strong style="color: #74CEF2;">🔒 Lưu ý bảo mật:</strong> Vui lòng không chia sẻ mã OTP này
+                            với bất kỳ ai, kể cả nhân viên TinyYummy.
                         </td>
                     </tr>
                 </table>
+
+                <!-- Security Tip -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                    style="background: #f8f9fa; border-left: 4px solid #C49A6C; padding: 15px; margin: 20px 0;">
+                    style="background: #f8fdfe; border-left: 4px solid #74CEF2; border-radius: 0 8px 8px 0; padding: 18px; margin: 25px 0;">
                     <tr>
                         <td style="font-size: 14px; color: #5a6c7d;">
-                            <strong>💡 Mẹo bảo mật:</strong> Nếu bạn không yêu cầu mã này, hãy thay đổi mật khẩu ngay
-                            lập tức và liên hệ <a href="mailto:support@minhhuong.com"
-                                style="color: #C49A6C;">support@minhhuong.com</a>.
+                            <strong style="color: #74CEF2;">💡 Mẹo bảo mật:</strong> Nếu bạn không yêu cầu mã này, hãy
+                            thay đổi mật khẩu ngay lập tức và liên hệ
+                            <a href="mailto:tinyyummy03@gmail.com"
+                                style="color: #74CEF2; text-decoration: none; font-weight: 600;">tinyyummy03@gmail.com</a>.
                         </td>
                     </tr>
                 </table>
+
+                <!-- Additional Info -->
+                <div
+                    style="background: #fafafa; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+                    <p style="font-size: 13px; color: #7f8c8d; margin: 0;">
+                        <strong>Tin tưởng và an toàn</strong> - Cùng nhau xây dựng hành trình ăn dặm hạnh phúc cho bé
+                        yêu 💕
+                    </p>
+                </div>
             </td>
         </tr>
+
+        <!-- Footer -->
         <tr>
-            <td style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 13px; color: #6c757d;">
-                Nếu bạn gặp khó khăn, vui lòng liên hệ qua <a href="mailto:support@minhhuong.com"
-                    style="color: #C49A6C;">support@minhhuong.com</a>.<br>
-                <strong style="color: #C49A6C;">Cảm ơn bạn đã tin tưởng Minh Hương!</strong><br><br>
-                <small>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</small>
+            <td
+                style="background: linear-gradient(135deg, #f8fdff 0%, #f0f9ff 100%); padding: 30px 20px; text-align: center; font-size: 13px; color: #6c757d; border-top: 1px solid #e0f7ff;">
+                <p style="margin: 0 0 15px;">
+                    Nếu bạn gặp khó khăn, vui lòng liên hệ qua
+                    <a href="mailto:support@tinyyummy.com"
+                        style="color: #74CEF2; text-decoration: none; font-weight: 600;">support@tinyyummy.com</a>
+                </p>
+                <p style="margin: 0 0 15px; font-size: 14px;">
+                    <strong style="color: #74CEF2;">Cảm ơn bạn đã tin tưởng Tiny Yummy! 👶</strong>
+                </p>
+                <small style="color: #95a5a6;">Email này được gửi tự động, vui lòng không trả lời trực tiếp.</small>
+
+                <!-- Decorative elements -->
+                <div style="margin-top: 20px; color: #74CEF2; font-size: 24px;">
+                    🥕 🍎 🥦
+                </div>
             </td>
         </tr>
     </table>

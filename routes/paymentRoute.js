@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const paymentController = require("../controllers/PaymentController");
+const QuizController = require("../controllers/QuizController");
 /**
  * @swagger
  * tags:
@@ -117,7 +118,7 @@ router.post("/create", paymentController.createPayment);
  *       500:
  *         description: Lỗi server
  */
-router.get("/return", paymentController.getPaymentReturn);
+router.get("/return", QuizController.getPaymentReturn);
 
 
 module.exports = router;

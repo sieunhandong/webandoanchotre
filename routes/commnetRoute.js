@@ -2,45 +2,6 @@ const router = require("express").Router();
 const commentController = require("../controllers/CommentController");
 const { checkAuthorize } = require("../middleware/authMiddleware");
 
-/**
- * @swagger
- * tags:
- *   name: Comments
- *   description: Quản lý bình luận cho review
- */
-
-/**
- * @swagger
- * /comment:
- *   post:
- *     summary: Gửi bình luận cho bài review (user)
- *     tags: [Comments]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - reviewId
- *               - content
- *             properties:
- *               reviewId:
- *                 type: string
- *                 description: ID của bài review
- *               content:
- *                 type: string
- *                 description: Nội dung bình luận
- *     responses:
- *       201:
- *         description: Đã gửi bình luận, chờ duyệt
- *       404:
- *         description: Không tìm thấy review
- *       500:
- *         description: Lỗi server
- */
 router.post("/", checkAuthorize(["user"]), commentController.createComment);
 
 /**

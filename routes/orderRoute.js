@@ -125,10 +125,5 @@ router.get(
   checkAuthorize(["user", "admin"]),
   orderController.getOrderDetails
 );
-router.put(
-  "/cancel/:id",
-  checkAuthorize(["user", "admin"]),
-  orderController.cancelOrder
-);
 
 module.exports = router;

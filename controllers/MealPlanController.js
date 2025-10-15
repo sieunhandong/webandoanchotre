@@ -40,7 +40,6 @@ Yêu cầu:
 ]
         `;
 
-        console.log("⚙️ Prompt gửi AI:\n", prompt);
 
         let aiText = "";
         let suggestions = [];
