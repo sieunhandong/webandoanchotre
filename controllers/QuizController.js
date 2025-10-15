@@ -505,10 +505,10 @@ exports.getPaymentReturn = async (req, res) => {
         }
 
         // ✅ 3. Tìm đơn hàng có mã tương ứng
-        const order = await Order.findOne({ orderCode: transferContent });
+        const order = await Order.findOne({ orderCode: data.code });
 
         if (!order) {
-            console.warn("⚠️ Không tìm thấy đơn hàng cho nội dung:", transferContent);
+            console.warn("⚠️ Không tìm thấy đơn hàng cho nội dung:", data.code);
             return res.status(200).json({ message: "Không tìm thấy đơn hàng phù hợp." });
         }
 
@@ -525,7 +525,6 @@ exports.getPaymentReturn = async (req, res) => {
 
         // ✅ 6. Cập nhật trạng thái thanh toán
         order.paymentStatus = "completed";
-        order.status = "completed";
         order.paymentIntentId = data.referenceCode || data.id?.toString();
         await order.save();
 
