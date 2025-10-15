@@ -500,7 +500,8 @@ exports.getPaymentReturn = async (req, res) => {
 
         // ✅ 2. Lấy nội dung chuyển khoản (VD: "DH102969")
         const transferContent = (data.content || "").trim().toUpperCase();
-
+        console.log("transferContent", transferContent);
+        console.log("transferContent", data.code);
         if (!transferContent) {
             return res.status(400).json({ message: "Thiếu nội dung giao dịch." });
         }
