@@ -11,6 +11,7 @@ const crypto = require("crypto");
 const qs = require("qs");
 const moment = require("moment");
 const MealSet = require('../models/MealSet');
+const sendEmail = require('../utils/sendMail');
 dotenv.config();
 
 const SEPAY_API_KEY = process.env.SEPAY_API_KEY
