@@ -446,7 +446,7 @@ exports.step7 = async (req, res) => {
         // Ví dụ link: https://qr.sepay.vn/img?acc=VQRQAEQNT2617&bank=MBBank&amount=100000&des=DH102969
         const sepayAccount = process.env.SEPAY_ACC;
         const sepayBank = process.env.SEPAY_BANK;
-        const orderCode = "DH" + moment().format("MMDD") + order._id.toString().slice(-6);
+        const orderCode = "DH" + moment().format("MMDD");
 
         const paymentUrl = `https://qr.sepay.vn/img?acc=${sepayAccount}&bank=${sepayBank}&amount=${amount}&des=${orderCode}`;
 
