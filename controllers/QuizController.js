@@ -444,8 +444,8 @@ exports.step7 = async (req, res) => {
         // 7️⃣ Tạo link QR Sepay
         // ==========================
         // Ví dụ link: https://qr.sepay.vn/img?acc=VQRQAEQNT2617&bank=MBBank&amount=100000&des=DH102969
-        const sepayAccount = process.env.SEPAY_ACC || "VQRQAEQNT2617";
-        const sepayBank = process.env.SEPAY_BANK || "MBBank";
+        const sepayAccount = process.env.SEPAY_ACC;
+        const sepayBank = process.env.SEPAY_BANK;
         const orderCode = "DH" + moment().format("MMDD") + order._id.toString().slice(-6);
 
         const paymentUrl = `https://qr.sepay.vn/img?acc=${sepayAccount}&bank=${sepayBank}&amount=${amount}&des=${orderCode}`;
@@ -488,7 +488,7 @@ exports.getPaymentReturn = async (req, res) => {
         }
 
         const apiKey = authHeader.split(' ')[1];
-        if (apiKey !== SEPAY_API_KEY) {
+        if (apiKey !== process.env.SEPAY_API_KEY) {
             return res.status(403).json({ message: 'Forbidden: Invalid API key' });
         }
         const data = req.body;
