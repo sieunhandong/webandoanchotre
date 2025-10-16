@@ -2,12 +2,12 @@ const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const bcrypt = require("bcryptjs");
 const otpGenerator = require("otp-generator");
-const sendEmail = require("../utils/sendMail");
 const Account = require("../models/Account");
 const generateToken = require("../utils/generalToken");
 const verifyEmail = require("../utils/verifyMail");
 const validateUtils = require("../utils/validateInput");
 const { OAuth2Client } = require("google-auth-library");
+const sendEmailOAuth = require("../utils/sendMailOAuth");
 dotenv.config();
 let otpStore = {};
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -48,7 +48,7 @@ const sendOtp = async (req, res) => {
 
 
     try {
-      await sendEmail(email, otp, type);
+      await sendEmailOAuth(email, otp, type);
     } catch (error) {
       res
         .status(500)

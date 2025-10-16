@@ -7,11 +7,9 @@ const UserProfile = require('../models/UserProfile');
 const Account = require('../models/Account');
 const { v4: uuidv4 } = require('uuid');
 const dotenv = require("dotenv");
-const crypto = require("crypto");
-const qs = require("qs");
 const moment = require("moment");
 const MealSet = require('../models/MealSet');
-const sendEmail = require('../utils/sendMail');
+const sendEmailOAuth = require('../utils/sendMailOAuth');
 dotenv.config();
 
 const SEPAY_API_KEY = process.env.SEPAY_API_KEY
@@ -546,7 +544,7 @@ exports.getPaymentReturn = async (req, res) => {
             const address = order.delivery?.address || {};
             const shippingInfoStr = `${address.address || ""}, ${address.provinceName || ""}, ${address.districtName || ""}, ${address.wardName || ""}`;
             try {
-                const info = await sendEmail(
+                const info = await sendEmailOAuth(
                     user.email,
                     {
                         orderId: order._id.toString(),
