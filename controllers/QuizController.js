@@ -10,6 +10,7 @@ const dotenv = require("dotenv");
 const crypto = require("crypto");
 const qs = require("qs");
 const moment = require("moment");
+const MealSet = require('../models/MealSet');
 dotenv.config();
 
 
@@ -329,16 +330,6 @@ exports.step6 = async (req, res) => {
 };
 
 // Step 7: Thanh toán
-
-const sortObject = (obj) => {
-    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
-    const sorted = {};
-    const keys = Object.keys(obj).sort();
-    for (const key of keys) {
-        sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, '+');
-    }
-    return sorted;
-};
 exports.step7 = async (req, res) => {
     try {
         const { sessionId, deliveryTime, address } = req.body;
@@ -477,6 +468,7 @@ exports.step7 = async (req, res) => {
             data: {
                 paymentUrl,
                 orderId: order._id,
+                orderCode,
             },
         });
     } catch (error) {
@@ -490,9 +482,6 @@ exports.step7 = async (req, res) => {
 exports.getPaymentReturn = async (req, res) => {
     try {
         const data = req.body;
-
-        console.log("📩 Webhook SePay nhận:", data);
-
         // ✅ 1. Chỉ xử lý giao dịch tiền vào
         if (data.transferType !== "in") {
             return res.status(200).json({ message: "Bỏ qua giao dịch không hợp lệ." });
@@ -528,10 +517,48 @@ exports.getPaymentReturn = async (req, res) => {
         order.paymentIntentId = data.referenceCode || data.id?.toString();
         await order.save();
 
-        console.log(`✅ Đơn hàng ${order.orderCode} đã thanh toán thành công.`);
+        // console.log(`✅ Đơn hàng ${order.orderCode} đã thanh toán thành công.`);
 
-        // ✅ 7. Phản hồi cho SePay
-        res.status(200).json({ message: "Cập nhật thanh toán thành công." });
+        // ✅ 7. Gửi email xác nhận thanh toán (chỉ 1 sản phẩm)
+        try {
+            const user = await Account.findById(order.userId);
+            const item = order.items[0]; // chỉ 1 sản phẩm
+            const mealSet = await MealSet.findById(item.setId);
+
+            const itemsHtml = `
+        <tr>
+          <td style="padding:10px;">${mealSet.title}</td>
+          <td style="padding:10px;text-align:center;">${item.quantity}</td>
+          <td style="padding:10px;text-align:right;">${(item.price * item.quantity).toLocaleString("vi-VN")} VND</td>
+        </tr>`;
+
+            const address = order.delivery?.address || {};
+            const shippingInfoStr = `${address.address || ""}, ${address.provinceName || ""}, ${address.districtName || ""}, ${address.wardName || ""}`;
+
+            await sendEmail(
+                user.email,
+                {
+                    orderId: order._id.toString(),
+                    paymentMethod: "Thanh toán trực tuyến",
+                    totalAmount: order.total,
+                    itemsHtml,
+                    shippingInfo: shippingInfoStr,
+                },
+                "orderConfirmation"
+            );
+
+            console.log(`📧 Email xác nhận thanh toán đã được gửi tới ${user.email}`);
+        } catch (mailError) {
+            console.error("❌ Lỗi gửi email:", mailError);
+        }
+        res.status(200).json({
+            success: true,
+            data: {
+                message: "Thanh toán thanh cong",
+                orderId: order._id,
+                orderCode: order.orderCode
+            }
+        });
     } catch (error) {
         console.error("❌ Lỗi xử lý webhook SePay:", error);
         res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -744,98 +771,12 @@ exports.getSets = async (req, res) => {
     }
 };
 
-exports.vnpayIpnCallback = async (req, res) => {
-    try {
-        const vnp_Params = req.body;
-        const secureHash = vnp_Params["vnp_SecureHash"];
-        const txnRef = vnp_Params["vnp_TxnRef"]; // Lấy vnp_TxnRef
-        const orderId = txnRef.split("_")[1]; // Trích xuất orderId
-
-        const order = await Order.findById(orderId);
-        if (!order) {
-            return res.status(404).json({ RspCode: '01', Message: 'Order không tồn tại' });
-        }
-
-        delete vnp_Params["vnp_SecureHash"];
-        delete vnp_Params["vnp_SecureHashType"];
-
-        vnp_Params = sortObject(vnp_Params);
-
-        const signData = qs.stringify(vnp_Params, { encode: false });
-        const hmac = crypto.createHmac("sha512", process.env.VNP_HASHSECRET);
-        const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-
-        if (secureHash === signed) {
-            if (vnp_Params["vnp_ResponseCode"] === "00") {
-                order.status = 'completed';
-                order.vnpayResponseCode = vnp_Params["vnp_ResponseCode"];
-                order.vnpayTransactionNo = vnp_Params["vnp_TransactionNo"];
-                await order.save();
-                console.log("✅ Thanh toán thành công:", orderId);
-            } else {
-                order.status = 'cancelled';
-                order.vnpayResponseCode = vnp_Params["vnp_ResponseCode"];
-                await order.save();
-                console.log("❌ Thanh toán thất bại:", orderId, "Mã lỗi:", vnp_Params["vnp_ResponseCode"]);
-            }
-            res.status(200).json({ RspCode: '00', Message: 'Confirm Success' });
-        } else {
-            console.error("❌ Chữ ký VNPAY không hợp lệ");
-            res.status(400).json({ RspCode: '97', Message: 'Invalid signature' });
-        }
-    } catch (error) {
-        console.error("❌ Lỗi IPN VNPAY:", error);
-        res.status(500).json({ RspCode: '99', Message: 'System error' });
-    }
-};
 // Lấy danh sách order
 exports.getOrders = async (req, res) => {
     try {
         const { userId } = req.user;
         const orders = await Order.find({ userId }).populate('items.setId');
         res.json({ success: true, data: orders });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
-
-// Mua lại order
-exports.rebuyOrder = async (req, res) => {
-    try {
-        const { userId } = req.user;
-        const { orderId } = req.body;
-        const order = await Order.findOne({ _id: orderId, userId }).populate('items.setId');
-        if (!order) return res.status(404).json({ message: 'Order không tồn tại' });
-
-        const newOrderData = {
-            userId,
-            items: order.items.map(item => ({
-                setId: item.setId._id,
-                duration: item.duration,
-                price: item.price,
-                quantity: 1,
-            })),
-            total: order.items.reduce((sum, item) => sum + item.price, 0),
-            status: 'pending',
-        };
-
-        const newOrder = new Order(newOrderData);
-        await newOrder.save();
-
-        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: newOrderData.total * 100,
-            currency: 'vnd',
-            metadata: { orderId: newOrder._id.toString() },
-        });
-
-        newOrder.paymentIntentId = paymentIntent.id;
-        await newOrder.save();
-
-        res.json({
-            success: true,
-            data: { clientSecret: paymentIntent.client_secret, orderId: newOrder._id },
-        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

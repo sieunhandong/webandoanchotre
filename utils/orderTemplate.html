@@ -4,56 +4,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xác Nhận Đơn Hàng</title>
+    <title>Xác Nhận Đơn Hàng - TinyYummy</title>
 </head>
 
 <body
-    style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 20px; margin: 0; color: #333;">
+    style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5fdff 0%, #e8f7ff 100%); padding: 20px; margin: 0; color: #333;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-        style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e9ecef;">
+        style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(116, 206, 242, 0.15); border: 1px solid #e0f7ff;">
+
+        <!-- Header -->
         <tr>
-            <td style="background: #C49A6C; padding: 30px 20px; text-align: center;">
-                <span style="font-size: 36px; color: #ffffff; font-weight: 600;">Minh Hương</span>
-                <h1 style="color: #ffffff; font-size: 24px; margin: 10px 0 0;">Xác nhận đơn hàng</h1>
+            <td
+                style="background: linear-gradient(135deg, #74CEF2 0%, #8BD8F5 100%); padding: 30px 20px; text-align: center; position: relative;">
+                <span style="font-size: 36px; color: #ffffff; font-weight: 700; display: block;">🍎 TinyYummy</span>
+                <h1 style="color: #ffffff; font-size: 24px; margin: 10px 0 0; font-weight: 600;">Xác nhận đơn hàng</h1>
             </td>
         </tr>
+
+        <!-- Body -->
         <tr>
             <td style="padding: 30px 20px;">
                 <p style="font-size: 16px; color: #2c3e50; margin: 0 0 20px;">Chào bạn,</p>
-                <p style="font-size: 14px; color: #5a6c7d; margin: 0 0 20px;">Cảm ơn bạn đã đặt hàng tại Minh Hương! Đơn
-                    hàng của bạn đã được xác nhận thành công. Dưới đây là chi tiết đơn hàng:</p>
+                <p style="font-size: 14px; color: #5a6c7d; margin: 0 0 25px; line-height: 1.6;">
+                    Cảm ơn bạn đã đặt hàng tại TinyYummy! Đơn hàng của bạn đã được xác nhận thành công. Dưới đây là chi
+                    tiết:
+                </p>
+
+                <!-- Thông tin đơn hàng -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 20px 0;">
                     <tr>
-                        <td style="font-size: 14px; color: #2c3e50; padding: 10px 0;"><strong>Mã đơn hàng:</strong>
+                        <td style="font-size: 14px; color: #2c3e50; padding: 8px 0;"><strong>Mã đơn hàng:</strong>
                             {{ORDER_ID}}</td>
                     </tr>
                     <tr>
-                        <td style="font-size: 14px; color: #2c3e50; padding: 10px 0;"><strong>Phương thức thanh
+                        <td style="font-size: 14px; color: #2c3e50; padding: 8px 0;"><strong>Phương thức thanh
                                 toán:</strong> {{PAYMENT_METHOD}}</td>
                     </tr>
                     <tr>
-                        <td style="font-size: 14px; color: #2c3e50; padding: 10px 0;"><strong>Tổng tiền:</strong>
+                        <td style="font-size: 14px; color: #2c3e50; padding: 8px 0;"><strong>Tổng tiền:</strong>
                             {{TOTAL_AMOUNT}} VND</td>
                     </tr>
                 </table>
-                <p style="font-size: 14px; color: #5a6c7d; margin: 0 0 20px;"><strong>Chi tiết sản phẩm:</strong></p>
+
+                <!-- Chi tiết sản phẩm -->
+                <p style="font-size: 14px; color: #5a6c7d; margin: 0 0 15px;"><strong>Chi tiết sản phẩm:</strong></p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                    style="border: 1px solid #e9ecef; margin: 20px 0;">
-                    <tr style="background: #f8f9fa;">
+                    style="border: 1px solid #e0f7ff; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+                    <tr style="background: #f0f9ff;">
                         <th style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: left;">Sản phẩm</th>
-                        <th style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: right;">Số lượng</th>
+                        <th style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: center;">Số lượng</th>
                         <th style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: right;">Giá</th>
                     </tr>
                     {{ITEMS}}
                 </table>
-                <p style="font-size: 14px; color: #5a6c7d; margin: 0 0 20px;"><strong>Thông tin giao hàng:</strong></p>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+
+                <!-- Thông tin giao hàng -->
+                <p style="font-size: 14px; color: #5a6c7d; margin: 0 0 15px;"><strong>Thông tin giao hàng:</strong></p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                    style="background: #f0f9ff; border: 2px solid #74CEF2; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
                     <tr>
-                        <td style="font-size: 14px; color: #2c3e50; padding: 5px 0;">{{SHIPPING_INFO}}</td>
+                        <td style="font-size: 14px; color: #2c5282;">{{SHIPPING_INFO}}</td>
                     </tr>
                 </table>
+
+                <!-- Lưu ý -->
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                    style="background: #fef9e7; border: 1px solid #f39c12; padding: 15px; margin: 20px 0;">
+                    style="background: #fef9e7; border: 1px solid #f39c12; padding: 15px; margin-bottom: 20px; border-radius: 12px;">
                     <tr>
                         <td style="font-size: 14px; color: #d68910;">
                             <strong>Lưu ý:</strong> Chúng tôi sẽ thông báo khi đơn hàng của bạn được xử lý và giao hàng.
@@ -63,11 +79,15 @@
                 </table>
             </td>
         </tr>
+
+        <!-- Footer -->
         <tr>
-            <td style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 13px; color: #6c757d;">
-                Nếu bạn có thắc mắc, vui lòng liên hệ qua <a href="mailto:support@minhhuong.com"
-                    style="color: #C49A6C;">support@minhhuong.com</a>.<br>
-                <strong style="color: #C49A6C;">Cảm ơn bạn đã tin tưởng Minh Hương!</strong><br><br>
+            <td
+                style="background: linear-gradient(135deg, #f8fdff 0%, #f0f9ff 100%); padding: 25px 20px; text-align: center; font-size: 13px; color: #6c757d; border-top: 1px solid #e0f7ff;">
+                Nếu bạn có thắc mắc, vui lòng liên hệ qua
+                <a href="mailto:tinyyummy03@gmail.com"
+                    style="color: #74CEF2; text-decoration: none; font-weight: 600;">tinyyummy03@gmail.com</a>.<br>
+                <strong style="color: #74CEF2;">Cảm ơn bạn đã tin tưởng TinyYummy! 💕</strong><br><br>
                 <small>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</small>
             </td>
         </tr>

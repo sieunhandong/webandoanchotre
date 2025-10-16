@@ -15,9 +15,7 @@ router.post('/step7', checkAuthorize(["user"]), quizController.step7);
 router.get('/step/:step', quizController.getStepData);
 
 // router.get('/payment-result', quizController.getPaymentReturn);
-router.post('/vnpay-ipn', quizController.vnpayIpnCallback);
 router.get('/orders', checkAuthorize(["user"]), quizController.getOrders);
-router.post('/rebuy-order', checkAuthorize(["user"]), quizController.rebuyOrder);
 router.get('/categories-products', quizController.getCategoriesAndProducts);
 router.get('/sets', quizController.getSets);
 

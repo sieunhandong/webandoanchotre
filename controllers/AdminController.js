@@ -160,7 +160,7 @@ Yêu cầu:
 - Phù hợp với phương pháp ăn dặm kiểu ${feedingMap[baby.feedingMethod] || "truyền thống"}.
 - Trả về KẾT QUẢ LÀ JSON HỢP LỆ TRONG MỘT DÒNG DUY NHẤT.
 - Trong mảng "menu", mỗi phần tử có dạng:
-  "Bữa sáng ăn <tên món>", "Bữa tối ăn <tên món>"
+  "Bữa sáng ăn: <tên món>", "Bữa tối ăn: <tên món>"
 `;
 
     const { GoogleGenAI } = await import("@google/genai");

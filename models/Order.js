@@ -31,7 +31,7 @@ const orderSchema = new mongoose.Schema({
   orderCode: { type: String, unique: true },
 
   // 🔹 Link QR Sepay (dễ truy cập lại nếu cần)
-  sepayQrUrl: { type: String },
+  paymentUrl: { type: String },
 
   // 🔹 Thời điểm thanh toán (khi nhận callback hoặc admin xác nhận)
   paidAt: { type: Date },

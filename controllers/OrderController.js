@@ -1,6 +1,6 @@
 const Order = require("../models/Order");
-const Book = require("../models/Product");
-const User = require("../models/User");
+const MealSet = require("../models/MealSet");
+const Account = require("../models/Account");
 const UserProfile = require("../models/UserProfile");
 const sendEmail = require("../utils/sendMail");
 const moment = require("moment");
@@ -8,129 +8,124 @@ const dotenv = require("dotenv");
 dotenv.config();
 const createOrder = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ user: req.user.id });
-
-    if (!cart || cart.cartItems.length === 0) {
-      return res.status(400).json({ message: "Giỏ hàng không được để trống!" });
+    // ==========================
+    // 1️⃣ Kiểm tra đăng nhập
+    // ==========================
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Vui lòng đăng nhập để tiếp tục đặt hàng",
+        redirect: "/login?redirect=/set-detail",
+      });
     }
-
-    const items = [];
-    const { shippingInfo, paymentMethod, discountUsed, pointUsed } = req.body;
 
     const userId = req.user.id;
+    const { setId, duration, price, deliveryTime, address } = req.body;
 
-    // Lấy sách và áp dụng giảm giá
-    const bookIds = cart.cartItems.map((item) => item.book);
-    const books = await Book.find({ _id: { $in: bookIds } });
-
-    // Tính tổng tiền
-    let totalAmount = 0;
-    let itemsHtml = "";
-
-    for (const item of cart.cartItems) {
-      const book = books.find(
-        (b) => b._id.toString() === item.book.toString()
-      );
-      if (!book) {
-        return res
-          .status(404)
-          .json({ message: `Sách ID ${item.book} không tồn tại!` });
-      }
-      if (book.stock < item.quantity) {
-        return res
-          .status(400)
-          .json({ message: `Sách "${book.title}" không đủ hàng!` });
-      }
-
-      const itemTotal = book.price * item.quantity;
-      totalAmount += itemTotal;
-
-      items.push({
-        book: book._id,
-        quantity: item.quantity,
-        price: book.price,
-      });
-
-      itemsHtml += `
-        <tr>
-          <td style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: left;">${book.title
-        }</td>
-          <td style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: right;">${item.quantity
-        }</td>
-          <td style="padding: 10px; font-size: 14px; color: #2c3e50; text-align: right;">${itemTotal.toLocaleString(
-          "vi-VN"
-        )} VND</td>
-        </tr>`;
-    }
-
-    // Áp dụng mã giảm giá
-    if (discount) {
-      if (discount.type === "fixed") {
-        totalAmount -= discount.value;
-      } else if (discount.type === "percentage") {
-        totalAmount -= (totalAmount * discount.value) / 100;
-      }
-    }
-
-    // Trừ điểm
-    totalAmount -= pointUsed;
-
-    // Giới hạn COD
-    if (paymentMethod === "COD" && totalAmount > 500000) {
+    // ==========================
+    // 2️⃣ Kiểm tra dữ liệu
+    // ==========================
+    if (!setId || !price) {
       return res.status(400).json({
-        message: "Thanh toán khi nhận hàng bị giới hạn ở đơn dưới 500.000đ",
+        success: false,
+        message: "Thiếu thông tin set ăn hoặc giá tiền!",
       });
     }
 
-    const newOrder = new Order({
-      user: userId,
-      items,
-      shippingInfo,
-      paymentMethod,
-      discountUsed,
-      pointUsed,
-      paymentStatus: "Pending",
-      orderStatus: "Pending",
+    // ==========================
+    // 3️⃣ Lấy thông tin Set Ăn
+    // ==========================
+    const mealSet = await MealSet.findById(setId);
+    if (!mealSet) {
+      return res.status(404).json({
+        success: false,
+        message: "Set ăn không tồn tại!",
+      });
+    }
+
+    // ==========================
+    // 4️⃣ Cập nhật hoặc tạo UserProfile
+    // ==========================
+    let userProfile = await UserProfile.findOne({ accountId: userId });
+    if (!userProfile) {
+      userProfile = new UserProfile({ accountId: userId });
+    }
+
+    if (address) {
+      userProfile.address = {
+        ...address,
+        isDefault: true,
+      };
+    }
+
+    await userProfile.save();
+    const account = await Account.findById(req.user.id);
+    if (account && !account.userInfo) {
+      account.userInfo = userProfile._id;
+      await account.save();
+    }
+    // ==========================
+    // 5️⃣ Tạo Order
+    // ==========================
+    const order = new Order({
+      userId,
+      items: [
+        {
+          setId: mealSet._id,
+          duration: duration || mealSet.duration || 1,
+          price,
+          quantity: 1,
+        },
+      ],
+      total: price,
+      delivery: {
+        time: deliveryTime || "Chưa xác định",
+        address: address || {},
+      },
+      paymentStatus: "pending",
+      status: "pending",
     });
 
-    const savedOrder = await newOrder.save();
+    // ==========================
+    // 6️⃣ Tạo mã thanh toán Sepay & link QR
+    // ==========================
+    const sepayAccount = process.env.SEPAY_ACC || "VQRQAEQNT2617";
+    const sepayBank = process.env.SEPAY_BANK || "MBBank";
 
-    // Xóa giỏ hàng sau khi tạo đơn
-    await Cart.findOneAndUpdate(
-      { user: userId },
-      { $set: { cartItems: [] } },
-      { new: true }
-    );
+    // Ví dụ mã đơn hàng: DHMMDD + 6 ký tự cuối của _id
+    const orderCode = "DH" + moment().format("MMDD") + order._id.toString().slice(-6);
 
-    // Nếu thanh toán COD thì tăng số lượt dùng mã giảm giá
-    if (savedOrder && paymentMethod === "COD" && discount) {
-      discount.usedCount = discount.usedCount + 1;
-      await discount.save();
-    }
+    const paymentUrl = `https://qr.sepay.vn/img?acc=${sepayAccount}&bank=${sepayBank}&amount=${price}&des=${orderCode}`;
 
-    // Gửi email xác nhận
-    const user = await User.findById(userId);
-    const shippingInfoStr = `${shippingInfo.address}, ${shippingInfo.provineName}, ${shippingInfo.districtName}, ${shippingInfo.wardName}`;
-    await sendEmail(
-      user.email,
-      {
-        orderId: savedOrder._id.toString(),
-        paymentMethod:
-          paymentMethod === "COD"
-            ? "Thanh toán khi nhận hàng"
-            : "Thanh toán trực tuyến",
-        totalAmount,
-        itemsHtml,
-        shippingInfo: shippingInfoStr,
+    order.paymentUrl = paymentUrl;
+    order.orderCode = orderCode;
+
+    await order.save();
+
+    // ==========================
+    // 7️⃣ Phản hồi client
+    // ==========================
+    res.json({
+      success: true,
+      message: "Đơn hàng đã được tạo thành công!",
+      data: {
+        orderId: order._id,
+        total: order.total,
+        delivery: order.delivery,
+        paymentStatus: order.paymentStatus,
+        orderCode: order.orderCode,
+        paymentUrl: order.paymentUrl,
       },
-      "orderConfirmation"
-    );
-
-    res.status(201).json({ data: savedOrder, totalAmount });
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("❌ Lỗi khi tạo đơn hàng:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
 
 async function getMyOrders(req, res) {
   try {
@@ -181,6 +176,19 @@ async function getMyOrders(req, res) {
     return res.status(500).json({ message: "Server error" });
   }
 }
+async function getOrderStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const order = await Order.findOne({ orderCode: id });
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    return res.json({ paymentStatus: order.paymentStatus });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+}
 
 
 async function getOrderDetails(req, res) {
@@ -209,9 +217,30 @@ async function getOrderDetails(req, res) {
     return res.status(500).json({ message: error.message });
   }
 }
+const deleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const order = await Order.findOne({ orderCode: id, userId: userId, paymentStatus: "pending" })
+
+    if (!order) {
+      return res.status(404).json({ message: "Đơn hàng không tồn tại hoặc đã thanh toán" });
+    }
+
+    await order.deleteOne();
+
+    return res.status(204).json({ success: true, message: "Đơn hàng đã bị hủy" });
+  } catch (error) {
+    console.error("❌ deleteOrder error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   createOrder,
   getMyOrders,
   getOrderDetails,
+  deleteOrder,
+  getOrderStatus
 };
