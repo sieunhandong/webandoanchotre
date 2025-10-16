@@ -482,8 +482,7 @@ exports.step7 = async (req, res) => {
 exports.getPaymentReturn = async (req, res) => {
     try {
 
-        const authHeader = req.headers['Authorization'];
-        console.log(authHeader);
+        const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Apikey ')) {
             return res.status(401).json({ message: 'Unauthorized: Missing API key' });
         }
