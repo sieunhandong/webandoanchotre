@@ -558,6 +558,7 @@ exports.getPaymentReturn = async (req, res) => {
                     "orderConfirmation"
                 );
                 console.log("📧 Mail sent:", info.messageId);
+
             } catch (error) {
                 console.error("❌ Lỗi gửi email:", error);
             }

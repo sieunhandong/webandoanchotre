@@ -49,9 +49,16 @@ const sendEmail = async (email, data, type) => {
     };
 
 
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
+    console.log("✅ Email sent successfully:", info.messageId);
+    return info; // 👈 thêm dòng này để getPaymentReturn log được
   } catch (error) {
-    console.log("Lỗi khi gửi email:", error);
+    console.error("❌ Lỗi khi gửi email:", {
+      message: error.message,
+      code: error.code,
+      response: error.response,
+    });
+    throw error; // 👈 ném lỗi ra ngoài để webhook biết
   }
 };
 
