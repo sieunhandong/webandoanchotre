@@ -18,7 +18,7 @@ app.use("/test", testRoute);
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "*",
     credentials: true,
   })
 );
