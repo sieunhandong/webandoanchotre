@@ -13,7 +13,7 @@ const moment = require("moment");
 const MealSet = require('../models/MealSet');
 dotenv.config();
 
-
+const SEPAY_API_KEY = process.env.SEPAY_API_KEY
 // Bắt đầu quiz
 exports.startQuiz = async (req, res) => {
     try {
@@ -481,6 +481,16 @@ exports.step7 = async (req, res) => {
 };
 exports.getPaymentReturn = async (req, res) => {
     try {
+
+        const authHeader = req.headers['Authorization'];
+        if (!authHeader || !authHeader.startsWith('Apikey ')) {
+            return res.status(401).json({ message: 'Unauthorized: Missing API key' });
+        }
+
+        const apiKey = authHeader.split(' ')[1];
+        if (apiKey !== SEPAY_API_KEY) {
+            return res.status(403).json({ message: 'Forbidden: Invalid API key' });
+        }
         const data = req.body;
         // ✅ 1. Chỉ xử lý giao dịch tiền vào
         if (data.transferType !== "in") {
