@@ -192,10 +192,10 @@ async function getOrderStatus(req, res) {
 
 
 async function getOrderDetails(req, res) {
-  const orderId = req.params.id;
-  const user = req.user;
-
   try {
+    const orderId = req.params.id;
+    const user = req.user;
+    console.log(user, orderId);
     const order = await Order.findById(orderId)
       .populate("items.setId", "title price duration");
 

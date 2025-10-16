@@ -3,8 +3,8 @@ const mongoose = require("mongoose");
 const UserProfileSchema = new mongoose.Schema({
     accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true }, // ai sở hữu profile này
     babyInfo: {
-        age: { type: Number },
-        weight: { type: Number },
+        age: { type: String },
+        weight: { type: String },
         allergies: [{ type: String }],
         feedingMethod: {
             type: String,

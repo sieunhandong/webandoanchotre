@@ -1,22 +1,32 @@
-const Book = require("../models/Product");
 const Order = require("../models/Order");
-const User = require("../models/User");
+const UserProfile = require("../models/UserProfile");
 const Account = require("../models/Account");
 const Product = require("../models/Product");
 const moment = require("moment");
+
+
+// 🧾 Lấy danh sách tất cả user (kèm hồ sơ)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const users = await Account.find()
+      .select("-password -accessToken -refreshToken")
+      .populate("userInfo", "babyInfo address isActive");
+
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ message: "Lỗi lấy danh sách user", error });
   }
 };
-
 exports.getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
-    if (!user) return res.status(404).json({ message: "User không tồn tại" });
+    const user = await Account.findById(req.params.id)
+      .select("-password -accessToken -refreshToken")
+      .populate("userInfo", "babyInfo address selectedProducts isActive");
+
+    if (!user) {
+      return res.status(404).json({ message: "User không tồn tại" });
+    }
+
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ message: "Lỗi lấy thông tin user", error });
@@ -25,22 +35,56 @@ exports.getUserById = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
+    const { accountData, profileData } = req.body;
+    // Cho phép gửi hai phần dữ liệu riêng biệt:
+    // accountData → { name, email, phone, role, isActivated }
+    // profileData → { babyInfo, address, selectedProducts }
+
+    const accountId = req.params.id;
+
+    // Cập nhật Account
+    const updatedAccount = await Account.findByIdAndUpdate(accountId, accountData, {
       new: true,
-    }).select("-password");
-    if (!updatedUser)
+    }).select("-password -accessToken -refreshToken");
+
+    if (!updatedAccount) {
       return res.status(404).json({ message: "User không tồn tại" });
-    res.status(200).json(updatedUser);
+    }
+
+    // Nếu có hồ sơ (profileData)
+    if (profileData) {
+      await UserProfile.findOneAndUpdate(
+        { accountId: accountId },
+        profileData,
+        { new: true, upsert: true } // nếu chưa có profile thì tạo mới
+      );
+    }
+
+    // Lấy lại dữ liệu đầy đủ sau cập nhật
+    const fullUser = await Account.findById(accountId)
+      .select("-password -accessToken -refreshToken")
+      .populate("userInfo", "babyInfo address selectedProducts isActive");
+
+    res.status(200).json(fullUser);
   } catch (error) {
     res.status(500).json({ message: "Lỗi cập nhật user", error });
   }
 };
 
+
+// 🗑️ Xóa user (và profile liên quan)
 exports.deleteUser = async (req, res) => {
   try {
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
-    if (!deletedUser)
+    const accountId = req.params.id;
+
+    const deletedAccount = await Account.findByIdAndDelete(accountId);
+    if (!deletedAccount) {
       return res.status(404).json({ message: "User không tồn tại" });
+    }
+
+    // Xóa luôn hồ sơ nếu có
+    await UserProfile.findOneAndDelete({ accountId });
+
     res.status(200).json({ message: "Xóa user thành công" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi xóa user", error });
@@ -50,7 +94,8 @@ exports.deleteUser = async (req, res) => {
 exports.changeStatusUser = async (req, res) => {
   try {
     const userId = req.params.id;
-    const user = await User.findById(userId);
+    const user = await Account.findById(userId).select("isActivated");
+
     if (!user) {
       return res
         .status(404)
@@ -60,7 +105,7 @@ exports.changeStatusUser = async (req, res) => {
     user.isActivated = !user.isActivated;
     await user.save();
 
-    res.status(200).json({ message: "Thành công", data: user });
+    res.status(200).json({ message: "Thay đổi trạng thái thành công", data: user });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server!", error: error.message });
   }
@@ -130,7 +175,10 @@ exports.suggestMealByAI = async (req, res) => {
   try {
     const { id } = req.params;
     const order = await Order.findById(id)
-      .populate("userId")
+      .populate({
+        path: "userId",
+        populate: { path: "userInfo" },
+      })
       .populate("items.setId");
 
     if (!order) return res.status(404).json({ message: "Không tìm thấy order" });
@@ -148,8 +196,8 @@ exports.suggestMealByAI = async (req, res) => {
 
     const prompt = `
 Thông tin bé:
-- Tháng tuổi: ${baby.age || 0}
-- Cân nặng: ${baby.weight || 0} kg
+- Tháng tuổi: ${baby.age || 4 - 6} tháng
+- Cân nặng: ${baby.weight || 4 - 6} kg
 - Phương pháp ăn dặm: ${feedingMap[baby.feedingMethod] || "truyền thống"}
 - Dị ứng: ${baby.allergies?.length ? baby.allergies.join(", ") : "Không có"}
 

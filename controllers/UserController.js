@@ -1,40 +1,73 @@
-const Book = require("../models/Product");
+const Product = require("../models/Product");
 const Complaint = require("../models/Complaint");
-const User = require("../models/User");
+const Account = require("../models/Account");
+const UserProfile = require("../models/UserProfile");
 // profile
 
+// Lấy thông tin tài khoản hiện tại, bao gồm profile chi tiết
 const getMyProfile = async (req, res) => {
   try {
-    const user = req?.user;
+    const userId = req.user._id;
+
+    const user = await Account.findById(userId)
+      .select("-password -accessToken -refreshToken")
+      .populate({
+        path: "userInfo",
+        select: "-__v -isActive -createdAt -updatedAt",
+      });
+
+    if (!user) {
+      return res.status(404).json({ message: "Người dùng không tồn tại!" });
+    }
+
     res.status(200).json({ user });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server!", error: error.message });
   }
 };
 
+// Sửa thông tin account + babyInfo
 const editMyProfile = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { name, email, phone } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(
+    const { name, email, phone, babyInfo } = req.body;
+    // babyInfo = { age, weight, allergies, feedingMethod }
+
+    // Cập nhật thông tin Account
+    const updatedAccount = await Account.findByIdAndUpdate(
       userId,
       { name, email, phone },
       { new: true, runValidators: true }
     ).select("-password -accessToken -refreshToken");
 
-    if (!updatedUser) {
+    if (!updatedAccount) {
       return res.status(404).json({ message: "Người dùng không tồn tại!" });
     }
 
+    // Cập nhật thông tin babyInfo trong UserProfile nếu có
+    let updatedProfile = null;
+    if (babyInfo && updatedAccount.userInfo) {
+      updatedProfile = await UserProfile.findByIdAndUpdate(
+        updatedAccount.userInfo,
+        { babyInfo },
+        { new: true, runValidators: true }
+      ).select("-__v -isActive -createdAt -updatedAt");
+    }
+
+    // Populating userInfo lại để trả về full data
+    const populatedUser = await Account.findById(userId)
+      .select("-password -accessToken -refreshToken")
+      .populate({
+        path: "userInfo",
+        select: "-__v -isActive -createdAt -updatedAt",
+      });
+
     res.status(200).json({
       message: "Cập nhật thông tin thành công!",
-      user: updatedUser,
+      user: populatedUser,
     });
   } catch (error) {
-    res.status(500).json({
-      message: "Lỗi server!",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Lỗi server!", error: error.message });
   }
 };
 
