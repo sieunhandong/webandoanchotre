@@ -545,18 +545,23 @@ exports.getPaymentReturn = async (req, res) => {
 
             const address = order.delivery?.address || {};
             const shippingInfoStr = `${address.address || ""}, ${address.provinceName || ""}, ${address.districtName || ""}, ${address.wardName || ""}`;
+            try {
+                const info = await sendEmail(
+                    user.email,
+                    {
+                        orderId: order._id.toString(),
+                        paymentMethod: "Thanh toán trực tuyến",
+                        totalAmount: order.total,
+                        itemsHtml,
+                        shippingInfo: shippingInfoStr,
+                    },
+                    "orderConfirmation"
+                );
+                console.log("📧 Mail sent:", info.messageId);
+            } catch (error) {
+                console.error("❌ Lỗi gửi email:", error);
+            }
 
-            await sendEmail(
-                user.email,
-                {
-                    orderId: order._id.toString(),
-                    paymentMethod: "Thanh toán trực tuyến",
-                    totalAmount: order.total,
-                    itemsHtml,
-                    shippingInfo: shippingInfoStr,
-                },
-                "orderConfirmation"
-            );
 
             console.log(`📧 Email xác nhận thanh toán đã được gửi tới ${user.email}`);
         } catch (mailError) {
