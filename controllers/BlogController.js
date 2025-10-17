@@ -198,6 +198,15 @@ const getBlogsByCategory = async (req, res) => {
   }
 };
 
+const getAllCategories = async (req, res) => {
+  try {
+    const blogCategory = await BlogCategory.find();
+    res.status(200).json(blogCategory);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server!", error: error.message });
+  }
+}
+
 module.exports = {
   createBlog,
   getAllBlogsByAdmin,
@@ -207,5 +216,6 @@ module.exports = {
   getHomeBlogs,
   getBlogsByMainCategories,
   getAllBlogs,
-  getBlogsByCategory
+  getBlogsByCategory,
+  getAllCategories
 };
