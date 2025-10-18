@@ -513,7 +513,7 @@ exports.getPaymentReturn = async (req, res) => {
         const order = await Order.findOne({ orderCode });
         if (!order) {
             console.warn("⚠️ Không tìm thấy đơn hàng với mã:", orderCode);
-            return res.status(200).json({ message: "Không tìm thấy đơn hàng phù hợp." });
+            return res.status(200).json({ message: "Không tìm thấy đơn hàng phù hợp abc.", orderCode });
         }
 
         // ✅ 5. Nếu đã thanh toán rồi thì bỏ qua
