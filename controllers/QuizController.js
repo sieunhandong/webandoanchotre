@@ -480,7 +480,7 @@ exports.step7 = async (req, res) => {
 };
 exports.getPaymentReturn = async (req, res) => {
     try {
-
+        // ✅ 1. Xác thực API key
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Apikey ')) {
             return res.status(401).json({ message: 'Unauthorized: Missing API key' });
@@ -490,48 +490,52 @@ exports.getPaymentReturn = async (req, res) => {
         if (apiKey !== process.env.SEPAY_API_KEY) {
             return res.status(403).json({ message: 'Forbidden: Invalid API key' });
         }
+
         const data = req.body;
-        // ✅ 1. Chỉ xử lý giao dịch tiền vào
+
+        // ✅ 2. Chỉ xử lý giao dịch tiền vào
         if (data.transferType !== "in") {
             return res.status(200).json({ message: "Bỏ qua giao dịch không hợp lệ." });
         }
 
-        // ✅ 2. Lấy nội dung chuyển khoản (VD: "DH102969")
-        const transferContent = (data.code || "").trim().toUpperCase();
-        if (!transferContent) {
-            return res.status(400).json({ message: "Thiếu nội dung giao dịch." });
+        // ✅ 3. Trích xuất mã đơn hàng (orderCode) từ content hoặc description
+        const rawText = `${data.content || ""} ${data.description || ""}`;
+        const match = rawText.match(/DH\d{4}[a-z0-9]{6}/i); // Tìm mã kiểu DH1018cb85cd
+        if (!match) {
+            console.warn("⚠️ Không tìm thấy mã đơn hàng trong nội dung:", rawText);
+            return res.status(200).json({ message: "Không tìm thấy mã đơn hàng phù hợp trong nội dung chuyển khoản." });
         }
 
-        // ✅ 3. Tìm đơn hàng có mã tương ứng
-        const order = await Order.findOne({ orderCode: data.code });
+        const orderCode = match[0].toUpperCase();
+        console.log("✅ Trích xuất orderCode:", orderCode);
 
+        // ✅ 4. Tìm đơn hàng theo orderCode
+        const order = await Order.findOne({ orderCode });
         if (!order) {
-            console.warn("⚠️ Không tìm thấy đơn hàng cho nội dung:", data.code);
+            console.warn("⚠️ Không tìm thấy đơn hàng với mã:", orderCode);
             return res.status(200).json({ message: "Không tìm thấy đơn hàng phù hợp." });
         }
 
-        // ✅ 4. Nếu đã thanh toán thì bỏ qua
+        // ✅ 5. Nếu đã thanh toán rồi thì bỏ qua
         if (order.paymentStatus === "completed") {
             return res.status(200).json({ message: "Đơn hàng đã được thanh toán trước đó." });
         }
 
-        // ✅ 5. Kiểm tra số tiền có khớp không
+        // ✅ 6. Kiểm tra số tiền có khớp không
         if (Number(data.transferAmount) < order.total) {
             console.warn("⚠️ Số tiền không khớp:", data.transferAmount, "vs", order.total);
             return res.status(200).json({ message: "Số tiền thanh toán không đủ." });
         }
 
-        // ✅ 6. Cập nhật trạng thái thanh toán
+        // ✅ 7. Cập nhật trạng thái thanh toán
         order.paymentStatus = "completed";
         order.paymentIntentId = data.referenceCode || data.id?.toString();
         await order.save();
 
-        // console.log(`✅ Đơn hàng ${order.orderCode} đã thanh toán thành công.`);
-
-        // ✅ 7. Gửi email xác nhận thanh toán (chỉ 1 sản phẩm)
+        // ✅ 8. Gửi email xác nhận thanh toán
         try {
             const user = await Account.findById(order.userId);
-            const item = order.items[0]; // chỉ 1 sản phẩm
+            const item = order.items[0]; // giả sử 1 sản phẩm
             const mealSet = await MealSet.findById(item.setId);
 
             const itemsHtml = `
@@ -543,33 +547,29 @@ exports.getPaymentReturn = async (req, res) => {
 
             const address = order.delivery?.address || {};
             const shippingInfoStr = `${address.address || ""}, ${address.provinceName || ""}, ${address.districtName || ""}, ${address.wardName || ""}`;
-            try {
-                const info = await sendEmailOAuth(
-                    user.email,
-                    {
-                        orderId: order._id.toString(),
-                        paymentMethod: "Thanh toán trực tuyến",
-                        totalAmount: order.total,
-                        itemsHtml,
-                        shippingInfo: shippingInfoStr,
-                    },
-                    "orderConfirmation"
-                );
-                console.log("📧 Mail sent:", info.messageId);
 
-            } catch (error) {
-                console.error("❌ Lỗi gửi email:", error);
-            }
-
-
-            console.log(`📧 Email xác nhận thanh toán đã được gửi tới ${user.email}`);
+            const info = await sendEmailOAuth(
+                user.email,
+                {
+                    orderId: order._id.toString(),
+                    paymentMethod: "Thanh toán trực tuyến",
+                    totalAmount: order.total,
+                    itemsHtml,
+                    shippingInfo: shippingInfoStr,
+                },
+                "orderConfirmation"
+            );
+            console.log("📧 Mail sent:", info.messageId);
+            console.log(`📧 Email xác nhận thanh toán đã gửi tới ${user.email}`);
         } catch (mailError) {
             console.error("❌ Lỗi gửi email:", mailError);
         }
+
+        // ✅ 9. Phản hồi SEPAY thành công
         res.status(200).json({
             success: true,
             data: {
-                message: "Thanh toán thanh cong",
+                message: "Thanh toán thành công",
                 orderId: order._id,
                 orderCode: order.orderCode
             }
