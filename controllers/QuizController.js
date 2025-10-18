@@ -506,7 +506,7 @@ exports.getPaymentReturn = async (req, res) => {
             return res.status(200).json({ message: "Không tìm thấy mã đơn hàng phù hợp trong nội dung chuyển khoản." });
         }
 
-        const orderCode = match[0].toUpperCase();
+        const orderCode = match[0];
         console.log("✅ Trích xuất orderCode:", orderCode);
 
         // ✅ 4. Tìm đơn hàng theo orderCode
