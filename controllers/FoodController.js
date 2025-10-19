@@ -4,7 +4,7 @@ const getHomeFoods = async (req, res) => {
     try {
         const foods = await Food.find()
             .sort({ createdAt: -1 })
-            .limit(6);
+            .limit(8);
 
         res.status(200).json({ success: true, data: foods });
     } catch (error) {

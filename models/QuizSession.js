@@ -35,5 +35,7 @@ const quizSessionSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     expiresAt: { type: Date, default: () => Date.now() + 24 * 60 * 60 * 1000 },
 }, { timestamps: true });
+// 🧹 TTL index: MongoDB tự động xóa khi expiresAt < now
+quizSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model("QuizSession", quizSessionSchema);

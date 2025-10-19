@@ -143,8 +143,8 @@ exports.step4 = async (req, res) => {
         // --- Prompt mới, thêm “Bữa sáng ăn...” và “Bữa tối ăn...” ---
         const prompt = `
 Thông tin trẻ:
-- Tháng tuổi: ${age || 0}
-- Cân nặng: ${weight || 0} kg
+- Tháng tuổi: ${age || 6}
+- Cân nặng: ${weight || 6} kg
 - Phương pháp ăn dặm: ${feedingMethod || "traditional"}
 - Dị ứng: ${allergies?.length ? allergies.join(", ") : "Không có"}
 - Nguyên liệu sẵn có: ${selectedList.length ? selectedList.join(", ") : "Chưa chọn"}
@@ -156,16 +156,17 @@ Yêu cầu:
 - ƯU TIÊN sử dụng các nguyên liệu trong “Nguyên liệu sẵn có”.
 - Kết quả PHẢI là JSON hợp lệ TRONG MỘT DÒNG DUY NHẤT.
 - Trong mảng "meals", mỗi phần tử phải có định dạng:
-  "Bữa sáng ăn <tên món>", "Bữa tối ăn <tên món>"
+  "Bữa sáng ăn: <tên món>", "Bữa tối ăn: <tên món>"
 - Ví dụ mẫu:
 [
-  { "day": 1, "meals": ["Bữa sáng ăn Cháo bí đỏ thịt gà", "Bữa tối ăn Súp cà rốt thịt bò"] },
-  { "day": 2, "meals": ["Bữa sáng ăn Cháo cá hồi rau củ", "Bữa tối ăn Bánh khoai tây hấp"] },
+  { "day": 1, "meals": ["Bữa sáng ăn: Cháo bí đỏ thịt gà", "Bữa tối ăn: Súp cà rốt thịt bò"] },
+  { "day": 2, "meals": ["Bữa sáng ăn: Cháo cá hồi rau củ", "Bữa tối ăn: Bánh khoai tây hấp"] },
   ...
-  { "day": 7, "meals": ["Bữa sáng ăn Cháo yến mạch táo", "Bữa tối ăn Cháo rau dền tôm"] }
+  { "day": 7, "meals": ["Bữa sáng ăn: Cháo yến mạch táo", "Bữa tối ăn: Cháo rau dền tôm"] }
 ]
 `;
 
+        console.log(prompt);
 
         let aiText = "";
         let suggestions = [];
@@ -662,7 +663,49 @@ exports.getStepData = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+exports.getQuizSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
 
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: "Thiếu sessionId trong yêu cầu.",
+            });
+        }
+
+        // 🔍 Tìm session trong DB
+        const session = await QuizSession.findOne({ sessionId });
+
+        // ❌ Không tìm thấy session (MongoDB có thể đã tự xóa nếu hết hạn)
+        if (!session) {
+            return res.status(404).json({
+                success: false,
+                message: "Quiz session không tồn tại hoặc đã hết hạn.",
+            });
+        }
+
+        // ✅ Trả về dữ liệu hợp lệ
+        return res.status(200).json({
+            success: true,
+            data: {
+                sessionId: session.sessionId,
+                step: session.step,
+                userId: session.userId,
+                data: session.data,
+                createdAt: session.createdAt,
+                expiresAt: session.expiresAt,
+            },
+        });
+    } catch (error) {
+        console.error("❌ Lỗi khi lấy quiz session:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi máy chủ khi lấy quiz session.",
+            error: error.message,
+        });
+    }
+};
 exports.getMealSuggestions = async (req, res) => {
     try {
         const { profile } = req.body;

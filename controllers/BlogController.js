@@ -121,6 +121,11 @@ const getBlogsByMainCategories = async (req, res) => {
       "Ăn dặm kiểu Nhật"
     ];
 
+    // Lấy query params từ client
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+    const skip = (page - 1) * limit;
+
     // Lấy thông tin category từ DB
     const mainCategories = await BlogCategory.find({
       name: { $in: mainCategoryNames }
@@ -129,26 +134,43 @@ const getBlogsByMainCategories = async (req, res) => {
     const result = [];
 
     for (let category of mainCategories) {
+      // Đếm tổng số blog trong category
+      const totalBlogs = await Blog.countDocuments({ blogCategoryId: category._id });
+
+      // Lấy blog có phân trang
       const blogs = await Blog.find({ blogCategoryId: category._id })
         .sort({ createdAt: -1 })
-        .limit(6)
+        .skip(skip)
+        .limit(limit)
         .populate("adminId", "name email")
         .populate("blogCategoryId", "name");
 
       result.push({
         category: { _id: category._id, name: category.name },
         blogs,
+        pagination: {
+          page,
+          limit,
+          totalBlogs,
+          totalPages: Math.ceil(totalBlogs / limit),
+        },
       });
     }
 
     // Sắp xếp kết quả theo thứ tự mainCategoryNames
-    result.sort((a, b) => mainCategoryNames.indexOf(a.category.name) - mainCategoryNames.indexOf(b.category.name));
+    result.sort(
+      (a, b) =>
+        mainCategoryNames.indexOf(a.category.name) -
+        mainCategoryNames.indexOf(b.category.name)
+    );
 
     res.status(200).json({ categories: result });
   } catch (error) {
+    console.error("❌ Lỗi getBlogsByMainCategories:", error);
     res.status(500).json({ message: error.message });
   }
 };
+
 // Lấy tất cả blog (cho trang Blog chính) với phân trang + filter category
 const getAllBlogs = async (req, res) => {
   try {

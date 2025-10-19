@@ -18,5 +18,6 @@ router.get('/step/:step', quizController.getStepData);
 router.get('/orders', checkAuthorize(["user"]), quizController.getOrders);
 router.get('/categories-products', quizController.getCategoriesAndProducts);
 router.get('/sets', quizController.getSets);
+router.get('/:sessionId', quizController.getQuizSession);
 
 module.exports = router;
