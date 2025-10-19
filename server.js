@@ -18,7 +18,10 @@ app.use("/test", testRoute);
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://tinyyummy.vercel.app"],
+    origin: [
+      "http://localhost:3000",
+      "https://tinyyummy.vercel.app",
+      "https://tinyyummy.com"],
     credentials: true,
   })
 );
