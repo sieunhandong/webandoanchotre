@@ -29,7 +29,7 @@ const sendEmail = async (email, data, type) => {
         }
 
         const response = await resend.emails.send({
-            from: "TinyYummy <onboarding@resend.dev>", // đổi thành domain riêng nếu muốn
+            from: "TinyYummy <noreply@tinyyummy.com>", // đổi thành domain riêng nếu muốn
             to: email,
             subject,
             html,
