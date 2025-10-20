@@ -12,6 +12,7 @@ const orderSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   delivery: {
     time: { type: String },
+    phone: { type: String },
     address: {
       address: { type: String },
       provinceId: { type: Number },

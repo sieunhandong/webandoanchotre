@@ -136,33 +136,134 @@ exports.step4 = async (req, res) => {
         if (selectedProducts?.length) {
             const products = await Product.find({ _id: { $in: selectedProducts } });
             selectedList = products.map(
-                (p) => `- ${p.name} (${p.category?.name || "Không rõ danh mục"})`
+                (p) => `- ${p.name}`
             );
         }
+        // --- Mapping phương pháp ăn dặm chi tiết ---
+        let feedingMethodText = "Ăn dặm truyền thống (xay nhuyễn, cho ăn bằng thìa)";
+        let feedingGuideline = `
+- Thức ăn được nấu chín mềm, nghiền hoặc xay nhuyễn.
+- Ưu tiên món cháo, súp, bột, dễ nuốt.
+- Phù hợp cho bé mới bắt đầu ăn dặm, cần thức ăn mịn.
+`;
 
-        // --- Prompt mới, thêm “Bữa sáng ăn...” và “Bữa tối ăn...” ---
+        switch (feedingMethod) {
+            case "blw":
+                feedingMethodText = "Ăn dặm tự chỉ huy (Baby-Led Weaning - bé tự bốc ăn)";
+                feedingGuideline = `
+- Bé tự cầm ăn, không cần đút thìa.
+- Món ăn cần mềm, dễ cầm, cắt dạng que hoặc khối.
+- Tránh món quá nhuyễn hoặc quá nhỏ dễ hóc.
+- Thức ăn hấp, luộc, hoặc nướng mềm, không chiên.
+`;
+                break;
+
+            case "japanese":
+                feedingMethodText = "Ăn dặm kiểu Nhật (ăn riêng từng món, vị nhẹ, trình bày đẹp mắt)";
+                feedingGuideline = `
+- Mỗi bữa gồm nhiều món nhỏ, mỗi món vị riêng nhẹ.
+- Không trộn nhiều nguyên liệu, chú trọng trình bày và cân bằng màu sắc.
+- Hạn chế nêm mặn, tránh dầu mỡ, cay.
+`;
+                break;
+
+            default:
+                break;
+        }
+
+        // --- Hàm parse giá trị dạng "6-8" hoặc "6–8 kg" hoặc chỉ "8" ---
+        function parseRange(value, defaultValue = 6) {
+            if (!value) return defaultValue;
+
+            // Loại bỏ chữ kg, tháng, dấu cách,...
+            const clean = String(value).toLowerCase().replace(/[^\d\.\-\–]/g, "").trim();
+
+            // Nếu là số đơn giản
+            if (!isNaN(Number(clean))) return Number(clean);
+
+            // Nếu là khoảng: "6-8", "6–8", "6 - 8"
+            const match = clean.match(/(\d+(?:\.\d+)?)[\-\–]+(\d+(?:\.\d+)?)/);
+            if (match) {
+                const min = parseFloat(match[1]);
+                const max = parseFloat(match[2]);
+                return (min + max) / 2; // lấy trung bình
+            }
+
+            // Không parse được → trả mặc định
+            return defaultValue;
+        }
+
+        // --- Gọi hàm parse ---
+        const parsedAge = parseRange(age, 6);
+        const parsedWeight = parseRange(weight, 6);
+
+        // --- Tính năng lượng ước tính ---
+        const estimatedCalories = Math.round(parsedWeight * 80);
+
+        // --- Phân tích tình trạng dinh dưỡng ---
+        let nutritionComment = "";
+        if (parsedWeight < parsedAge - 1) {
+            nutritionComment = "→ Bé hơi nhẹ cân, nên bổ sung thực phẩm giàu năng lượng và chất béo tốt.";
+        } else if (parsedWeight > parsedAge + 1) {
+            nutritionComment = "→ Bé có xu hướng nặng cân, nên ưu tiên món dễ tiêu, ít dầu mỡ.";
+        } else {
+            nutritionComment = "→ Cân nặng phù hợp với lứa tuổi, duy trì chế độ ăn cân đối.";
+        }
+
+        // --- Gợi ý cách mô tả để AI hiểu ---
+        let nutritionGuideline = `
+Dựa vào thông tin của bé:
+- Tháng tuổi: ${age || "6"} → Giai đoạn này nên ${parsedAge < 8
+                ? "ăn đồ mềm, nghiền mịn và dễ nuốt"
+                : parsedAge < 12
+                    ? "bắt đầu làm quen với đồ cắt nhỏ, mềm, dễ nhai"
+                    : "ăn được cơm nát và món đa dạng hơn"
+            }.
+- Cân nặng: ${weight || "6"}→ Ước tính cần khoảng ${estimatedCalories} kcal/ngày. ${nutritionComment}
+- Dị ứng: ${allergies?.length ? allergies.join(", ") : "Không có"} → Loại bỏ toàn bộ nguyên liệu này khỏi món ăn.
+`;
+
+
+        if (selectedList?.length) {
+            nutritionGuideline += `
+- Nguyên liệu sẵn có trong nhà: ${selectedList.join(", ")} → Ưu tiên sử dụng các nguyên liệu này khi tạo thực đơn.
+`;
+        }
+
+        // --- Prompt AI mở rộng ---
         const prompt = `
-Thông tin trẻ:
-- Tháng tuổi: ${age || 6}
-- Cân nặng: ${weight || 6} kg
-- Phương pháp ăn dặm: ${feedingMethod || "traditional"}
-- Dị ứng: ${allergies?.length ? allergies.join(", ") : "Không có"}
-- Nguyên liệu sẵn có: ${selectedList.length ? selectedList.join(", ") : "Chưa chọn"}
+Thông tin chi tiết của bé:
+${nutritionGuideline}
 
-Yêu cầu:
-- Hãy gợi ý thực đơn ăn dặm cho CHÍNH XÁC 7 ngày, mỗi ngày 2 bữa (sáng và tối).
-- Mỗi bữa chỉ cần tên món ăn, KHÔNG cần lý do.
-- Loại bỏ nguyên liệu có trong danh sách dị ứng.
-- ƯU TIÊN sử dụng các nguyên liệu trong “Nguyên liệu sẵn có”.
+Phương pháp ăn dặm: ${feedingMethodText}
+Hướng dẫn thực đơn theo phương pháp:
+${feedingGuideline}
+
+Yêu cầu AI:
+- Gợi ý thực đơn ăn dặm cho CHÍNH XÁC 7 ngày, mỗi ngày 2 bữa (sáng và tối).
+- Mỗi bữa chỉ cần TÊN MÓN ĂN (và có thể thêm mô tả ngắn về lợi ích hoặc lý do gợi ý).
+- Các món ăn phải PHÙ HỢP với:
+  1. Tháng tuổi và cân nặng của bé.
+  2. Phương pháp ăn dặm.
+  3. Dị ứng (tuyệt đối loại trừ các nguyên liệu dị ứng).
+  4. Nguyên liệu sẵn có nếu có thể.
+- Không lặp lại món trong 7 ngày.
+- Không cay, không mặn, không chiên giòn.
 - Kết quả PHẢI là JSON hợp lệ TRONG MỘT DÒNG DUY NHẤT.
-- Trong mảng "meals", mỗi phần tử phải có định dạng:
-  "Bữa sáng ăn: <tên món>", "Bữa tối ăn: <tên món>"
-- Ví dụ mẫu:
+- Mỗi phần tử có dạng:
+  {
+    "day": <số ngày>,
+    "meals": [
+      "Bữa sáng ăn: <tên món> - <mô tả lợi ích ngắn>",
+      "Bữa tối ăn: <tên món> - <mô tả lợi ích ngắn>"
+    ]
+  }
+Ví dụ mẫu:
 [
-  { "day": 1, "meals": ["Bữa sáng ăn: Cháo bí đỏ thịt gà", "Bữa tối ăn: Súp cà rốt thịt bò"] },
-  { "day": 2, "meals": ["Bữa sáng ăn: Cháo cá hồi rau củ", "Bữa tối ăn: Bánh khoai tây hấp"] },
+  { "day": 1, "meals": ["Bữa sáng ăn: Cháo bí đỏ thịt gà - Giàu vitamin A, dễ tiêu", "Bữa tối ăn: Súp cà rốt thịt bò - Cung cấp sắt và protein"] },
+  { "day": 2, "meals": ["Bữa sáng ăn: Cháo cá hồi rau củ - Giàu omega-3 giúp phát triển não", "Bữa tối ăn: Bánh khoai tây hấp - Giúp bé tập nhai"] },
   ...
-  { "day": 7, "meals": ["Bữa sáng ăn: Cháo yến mạch táo", "Bữa tối ăn: Cháo rau dền tôm"] }
+  { "day": 7, "meals": ["Bữa sáng ăn: Cháo yến mạch táo - Tăng chất xơ", "Bữa tối ăn: Cháo rau dền tôm - Cung cấp canxi và sắt"] }
 ]
 `;
 
@@ -226,11 +327,17 @@ Yêu cầu:
 
 
         // --- Lưu vào QuizSession ---
-        session.data.mealSuggestions = suggestions;
-        session.markModified("data.mealSuggestions");
-        session.step = 5;
-
-        const savedSession = await session.save();
+        // --- Lưu vào QuizSession (sửa lỗi VersionError) ---
+        await QuizSession.findByIdAndUpdate(
+            session._id,
+            {
+                $set: {
+                    "data.mealSuggestions": suggestions,
+                    step: 5,
+                },
+            },
+            { new: true }
+        );
 
         res.json({
             success: true,
@@ -332,9 +439,8 @@ exports.step6 = async (req, res) => {
 // Step 7: Thanh toán
 exports.step7 = async (req, res) => {
     try {
-        const { sessionId, deliveryTime, address } = req.body;
-
-        // ==========================
+        const { sessionId, deliveryTime, address, phone } = req.body;
+        // ==================== ======
         // 1️⃣ Tìm phiên quiz
         // ==========================
         const session = await QuizSession.findOne({ sessionId });
@@ -361,6 +467,7 @@ exports.step7 = async (req, res) => {
         session.userId = req.user.id;
         session.data.delivery = {
             time: deliveryTime,
+            phone: phone,
             address: {
                 address: address.address,
                 provinceId: address.provinceId,
@@ -386,7 +493,7 @@ exports.step7 = async (req, res) => {
             age: session.data.age || null,
             weight: session.data.weight || null,
             allergies: session.data.allergies || [],
-            feedingMethod: session.data.feedingMethod || "traditional",
+            feedingMethod: session.data.feedingMethod || null,
         };
 
         if (session.data.delivery?.address) {

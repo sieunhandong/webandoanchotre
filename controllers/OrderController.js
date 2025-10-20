@@ -20,7 +20,7 @@ const createOrder = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const { setId, duration, price, deliveryTime, address } = req.body;
+    const { setId, duration, price, deliveryTime, address, phone } = req.body;
 
     // ==========================
     // 2️⃣ Kiểm tra dữ liệu
@@ -80,6 +80,7 @@ const createOrder = async (req, res) => {
       total: price,
       delivery: {
         time: deliveryTime || "Chưa xác định",
+        phone: phone || "",
         address: address || {},
       },
       paymentStatus: "pending",

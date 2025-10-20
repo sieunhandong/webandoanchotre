@@ -302,7 +302,7 @@ const googleLogin = async (req, res) => {
         name,
         googleId,
         isActivated: true,
-        role: "customer",
+        role: "user",
       });
       await user.save();
     } else if (!user.googleId) {

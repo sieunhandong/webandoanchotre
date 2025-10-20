@@ -17,6 +17,7 @@ const quizSessionSchema = new mongoose.Schema({
         },
         delivery: {
             time: { type: String },
+            phone: { type: String },
             address: {
                 address: { type: String },
                 provinceId: { type: Number },
