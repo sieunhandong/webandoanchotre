@@ -5,7 +5,6 @@ const Product = require("../models/Product");
 const moment = require("moment");
 
 
-// 🧾 Lấy danh sách tất cả user (kèm hồ sơ)
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await Account.find()
@@ -68,6 +67,37 @@ exports.updateUser = async (req, res) => {
     res.status(200).json(fullUser);
   } catch (error) {
     res.status(500).json({ message: "Lỗi cập nhật user", error });
+  }
+};
+// 🧩 Cập nhật role của user (admin / user)
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Kiểm tra role hợp lệ
+    const allowedRoles = ["user", "admin"];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ message: "Role không hợp lệ (chỉ chấp nhận: user, admin)" });
+    }
+
+    const updatedUser = await Account.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true }
+    ).select("-password -accessToken -refreshToken");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Không tìm thấy user" });
+    }
+
+    res.status(200).json({
+      message: `Cập nhật quyền thành công: ${updatedUser.name} → ${updatedUser.role}`,
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("❌ updateUserRole error:", error);
+    res.status(500).json({ message: "Lỗi cập nhật role người dùng", error });
   }
 };
 

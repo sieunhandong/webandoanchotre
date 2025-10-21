@@ -15,7 +15,7 @@ exports.getAllProducts = async (req, res) => {
 // Lấy thông tin một sách theo ID
 exports.getProductById = async (req, res) => {
   try {
-    const book = await Product.findById(req.params.id).populate("categories");
+    const book = await Product.findById(req.params.id).populate("category");
 
     if (!book) return res.status(404).json({ message: "Không tìm thấy sách" });
     res.status(200).json(book);

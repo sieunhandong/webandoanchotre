@@ -22,6 +22,7 @@ router.get(
   adminController.getUserById
 );
 router.put("/users/:id", checkAuthorize(["admin"]), adminController.updateUser);
+router.put("/users/:id/role", checkAuthorize(["admin"]), adminController.updateUserRole);
 router.put(
   "/users/:id/change-status",
   checkAuthorize(["admin"]),
@@ -45,7 +46,7 @@ router.put("/orders/update-meal-done", checkAuthorize(["admin"]), adminControlle
 
 //Quản lý sách
 router.get("/products", checkAuthorize(["admin"]), adminBookController.getAllProducts);
-router.get("/products/:id", checkAuthorize(["admin"]), adminBookController.getAllProducts);
+router.get("/products/:id", checkAuthorize(["admin"]), adminBookController.getProductById);
 router.post(
   "/products",
   checkAuthorize(["admin"]),
