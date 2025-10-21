@@ -307,8 +307,53 @@ Ví dụ mẫu:
             const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
             if (!jsonMatch) throw new Error("Không tìm thấy JSON trong phản hồi");
 
-            const jsonText = jsonMatch[0];
-            suggestions = JSON.parse(jsonText);
+            // --- Làm sạch và parse dữ liệu ---
+            try {
+                let cleanedText = aiText
+                    .replace(/```json|```/gi, "")
+                    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+                    .replace(/\r?\n|\r/g, " ")
+                    .replace(/\\n/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+                // Xóa các ký tự không hợp lệ trước dấu [ hoặc sau dấu ]
+                const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) throw new Error("Không tìm thấy JSON trong phản hồi");
+
+                let jsonText = jsonMatch[0];
+
+                // 🧹 Thử làm sạch JSON trước khi parse
+                jsonText = jsonText
+                    .replace(/,\s*([}\]])/g, "$1") // xóa dấu , thừa trước } hoặc ]
+                    .replace(/“|”/g, '"') // thay ngoặc kép kiểu word
+                    .replace(/‘|’/g, "'") // thay ngoặc đơn kiểu word
+                    .replace(/\s+([}\]])/g, "$1") // xóa khoảng trắng thừa
+
+                try {
+                    suggestions = JSON.parse(jsonText);
+                } catch (parseErr) {
+                    console.warn("⚠️ Parse lần 1 thất bại, thử lần 2 với JSON5-like fix");
+                    // Cố gắng "cứu" JSON nếu chỉ sai nhẹ
+                    jsonText = jsonText.replace(/(\w+):/g, '"$1":');
+                    suggestions = JSON.parse(jsonText);
+                }
+
+                if (!Array.isArray(suggestions) || !suggestions.length)
+                    throw new Error("Dữ liệu JSON không hợp lệ");
+
+                suggestions = suggestions.slice(0, 7);
+            } catch (err) {
+                console.warn("⚠️ AI không trả về JSON hợp lệ, fallback sang text parse:", err.message);
+                suggestions = Array.from({ length: 7 }).map((_, i) => ({
+                    day: i + 1,
+                    meals: [
+                        `Bữa sáng ăn Món sáng ${i + 1}`,
+                        `Bữa tối ăn Món tối ${i + 1}`,
+                    ],
+                }));
+            }
+
 
             if (!Array.isArray(suggestions) || !suggestions.length)
                 throw new Error("Dữ liệu JSON không hợp lệ");

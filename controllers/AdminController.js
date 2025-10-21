@@ -177,74 +177,166 @@ exports.suggestMealByAI = async (req, res) => {
     const order = await Order.findById(id)
       .populate({
         path: "userId",
-        populate: { path: "userInfo" },
+        populate: {
+          path: "userInfo",
+          populate: { path: "selectedProducts" },
+        },
       })
       .populate("items.setId");
 
     if (!order) return res.status(404).json({ message: "Không tìm thấy order" });
 
     const baby = order.userId?.userInfo?.babyInfo || {};
+    const selectedProducts = order.userId?.userInfo?.selectedProducts || [];
+    const likedProductNames = selectedProducts.map(p => p.name).filter(Boolean);
+
+    // --- Parse dữ liệu ---
+    function parseRange(value, defaultValue = 6) {
+      if (!value) return defaultValue;
+      const clean = String(value).toLowerCase().replace(/[^\d\.\-\–]/g, "").trim();
+      if (!isNaN(Number(clean))) return Number(clean);
+      const match = clean.match(/(\d+(?:\.\d+)?)[\-\–]+(\d+(?:\.\d+)?)/);
+      if (match) {
+        const min = parseFloat(match[1]);
+        const max = parseFloat(match[2]);
+        return (min + max) / 2;
+      }
+      return defaultValue;
+    }
+
+    const parsedAge = parseRange(baby.age, 6);
+    const parsedWeight = parseRange(baby.weight, 6);
+    const estimatedCalories = Math.round(parsedWeight * 80);
+
+    // --- Dinh dưỡng & phương pháp ---
+    let nutritionComment = "";
+    if (parsedWeight < parsedAge - 1)
+      nutritionComment = "→ Bé hơi nhẹ cân, nên bổ sung thực phẩm giàu năng lượng và chất béo tốt.";
+    else if (parsedWeight > parsedAge + 1)
+      nutritionComment = "→ Bé có xu hướng nặng cân, nên ưu tiên món dễ tiêu, ít dầu mỡ.";
+    else nutritionComment = "→ Cân nặng phù hợp với lứa tuổi, duy trì chế độ ăn cân đối.";
+
     const feedingMap = {
       traditional: "truyền thống",
       blw: "tự chỉ huy",
       japanese: "kiểu Nhật",
     };
 
-    // Xác định số ngày theo set
-    const duration =
-      order.items?.[0]?.duration || 7; // nếu không có thì mặc định 7
-
-    const prompt = `
-Thông tin bé:
-- Tháng tuổi: ${baby.age || 4 - 6} tháng
-- Cân nặng: ${baby.weight || 4 - 6} kg
-- Phương pháp ăn dặm: ${feedingMap[baby.feedingMethod] || "truyền thống"}
-- Dị ứng: ${baby.allergies?.length ? baby.allergies.join(", ") : "Không có"}
-
-Yêu cầu:
-- Hãy gợi ý thực đơn ăn dặm cho CHÍNH XÁC ${duration} ngày, mỗi ngày 2 bữa (sáng và tối).
-- Mỗi bữa chỉ cần tên món ăn, KHÔNG cần giải thích.
-- Không dùng nguyên liệu có trong danh sách dị ứng.
-- Phù hợp với phương pháp ăn dặm kiểu ${feedingMap[baby.feedingMethod] || "truyền thống"}.
-- Trả về KẾT QUẢ LÀ JSON HỢP LỆ TRONG MỘT DÒNG DUY NHẤT.
-- Trong mảng "menu", mỗi phần tử có dạng:
-  "Bữa sáng ăn: <tên món>", "Bữa tối ăn: <tên món>"
+    let feedingMethodText = "Ăn dặm truyền thống (xay nhuyễn, cho ăn bằng thìa)";
+    let feedingGuideline = `
+- Thức ăn được nấu chín mềm, nghiền hoặc xay nhuyễn.
+- Ưu tiên món cháo, súp, bột, dễ nuốt.
+- Phù hợp cho bé mới bắt đầu ăn dặm.
 `;
 
-    const { GoogleGenAI } = await import("@google/genai");
-    const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-    const result = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    });
+    if (baby.feedingMethod === "blw") {
+      feedingMethodText = "Ăn dặm tự chỉ huy (Baby-Led Weaning - bé tự bốc ăn)";
+      feedingGuideline = `
+- Bé tự cầm ăn, không đút thìa.
+- Món ăn cần mềm, dễ cầm, cắt dạng que hoặc khối.
+- Tránh món quá nhỏ dễ hóc.
+- Không chiên giòn, không cay.
+`;
+    } else if (baby.feedingMethod === "japanese") {
+      feedingMethodText = "Ăn dặm kiểu Nhật (ăn riêng từng món, vị nhẹ, trình bày đẹp mắt)";
+      feedingGuideline = `
+- Mỗi bữa gồm nhiều món nhỏ, vị riêng nhẹ.
+- Không trộn nhiều nguyên liệu.
+- Hạn chế nêm mặn, tránh dầu mỡ.
+`;
+    }
 
-    let aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // --- Hướng dẫn dinh dưỡng ---
+    let nutritionGuideline = `
+Dựa vào thông tin của bé:
+- Tháng tuổi: ${baby.age || "6"} → Giai đoạn này nên ${parsedAge < 8
+        ? "ăn đồ mềm, nghiền mịn và dễ nuốt"
+        : parsedAge < 12
+          ? "bắt đầu làm quen với đồ cắt nhỏ, mềm, dễ nhai"
+          : "ăn được cơm nát và món đa dạng hơn"
+      }.
+- Cân nặng: ${baby.weight || "6"} → Ước tính cần khoảng ${estimatedCalories} kcal/ngày. ${nutritionComment}
+- Dị ứng: ${baby.allergies?.length ? baby.allergies.join(", ") : "Không có"} → Loại bỏ các nguyên liệu này.
+`;
 
+    if (likedProductNames.length)
+      nutritionGuideline += `
+- Nguyên liệu bé thích: ${likedProductNames.join(", ")} → Ưu tiên sử dụng nếu phù hợp.
+`;
+
+    const duration = order.items?.[0]?.duration || 7;
+
+    const prompt = `
+Thông tin chi tiết của bé:
+${nutritionGuideline}
+
+Phương pháp ăn dặm: ${feedingMethodText}
+Hướng dẫn thực đơn:
+${feedingGuideline}
+
+Yêu cầu:
+- Gợi ý thực đơn ăn dặm CHÍNH XÁC ${duration} ngày, mỗi ngày 2 bữa (sáng & tối).
+- Mỗi bữa chỉ cần tên món và mô tả lợi ích ngắn.
+- Không dùng nguyên liệu dị ứng.
+- Ưu tiên món có nguyên liệu bé thích.
+- Không lặp món, không cay, không chiên.
+- Kết quả phải là JSON hợp lệ, mảng 7 phần tử như sau:
+[
+  { "day": 1, "menu": ["Bữa sáng: Cháo bí đỏ thịt gà - Giàu vitamin A", "Bữa tối: Súp cà rốt thịt bò - Cung cấp sắt"] },
+  ...
+]
+`;
+
+    console.log(prompt);
+    // --- Gọi AI ---
+    let aiText = "";
     let suggestions = [];
     try {
-      const cleaned = aiText
-        .replace(/```json|```/g, "")
-        .replace(/\n/g, " ")
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+      const result = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      });
+      aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } catch (err) {
+      console.warn("⚠️ Không thể gọi Gemini:", err.message);
+    }
+
+    // --- Parse kết quả AI ---
+    try {
+      let cleaned = aiText
+        .replace(/```json|```/gi, "")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .replace(/\r?\n|\r/g, " ")
         .trim();
-      const match = cleaned.match(/\[[\s\S]*\]/);
-      suggestions = JSON.parse(match[0]);
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error("Không tìm thấy JSON");
+      suggestions = JSON.parse(jsonMatch[0]);
+      // --- Chuẩn hóa key để đảm bảo luôn có "menu"
+      suggestions = suggestions.map((item, i) => ({
+        day: item.day || i + 1,
+        menu: item.menu || item.meals || item.Menu || item.MEALS || [],
+      }));
+
     } catch (e) {
-      console.error("⚠️ Parse lỗi, fallback:", e);
+      console.warn("⚠️ Parse lỗi, fallback mẫu:", e.message);
       suggestions = Array.from({ length: duration }).map((_, i) => ({
         day: i + 1,
-        menu: [`Bữa sáng ăn Cháo sáng ${i + 1}`, `Bữa tối ăn Cháo tối ${i + 1}`],
+        menu: [
+          `Bữa sáng: Cháo sáng ${i + 1}`,
+          `Bữa tối: Cháo tối ${i + 1}`,
+        ],
       }));
     }
 
-    return res.json({
-      success: true,
-      data: suggestions,
-    });
+    return res.json({ success: true, data: suggestions });
   } catch (err) {
-    console.error(err);
+    console.error("❌ suggestMealByAI Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 
 
