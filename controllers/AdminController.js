@@ -307,6 +307,7 @@ ${feedingGuideline}
 Yêu cầu:
 - Gợi ý thực đơn ăn dặm CHÍNH XÁC ${duration} ngày, mỗi ngày 2 bữa (sáng & tối).
 - Mỗi bữa chỉ cần tên món và mô tả lợi ích ngắn.
+- Nếu trong một bữa có nhiều món (ví dụ cháo, rau, củ, hoặc trái cây), hãy liệt kê chúng trong cùng một chuỗi và NGĂN CÁCH bằng dấu phẩy (,).
 - Không dùng nguyên liệu dị ứng.
 - Ưu tiên món có nguyên liệu bé thích.
 - Không lặp món, không cay, không chiên.

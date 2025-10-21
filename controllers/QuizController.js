@@ -242,6 +242,7 @@ ${feedingGuideline}
 Yêu cầu AI:
 - Gợi ý thực đơn ăn dặm cho CHÍNH XÁC 7 ngày, mỗi ngày 2 bữa (sáng và tối).
 - Mỗi bữa chỉ cần TÊN MÓN ĂN (và có thể thêm mô tả ngắn về lợi ích hoặc lý do gợi ý).
+- Nếu trong một bữa có nhiều món (ví dụ cháo, rau, củ, hoặc trái cây), hãy liệt kê chúng trong cùng một chuỗi và NGĂN CÁCH bằng dấu phẩy (,).
 - Các món ăn phải PHÙ HỢP với:
   1. Tháng tuổi và cân nặng của bé.
   2. Phương pháp ăn dặm.
@@ -254,16 +255,16 @@ Yêu cầu AI:
   {
     "day": <số ngày>,
     "meals": [
-      "Bữa sáng ăn: <tên món> - <mô tả lợi ích ngắn>",
-      "Bữa tối ăn: <tên món> - <mô tả lợi ích ngắn>"
+      "Bữa sáng: <tên món> - <mô tả lợi ích ngắn>",
+      "Bữa tối: <tên món> - <mô tả lợi ích ngắn>"
     ]
   }
 Ví dụ mẫu:
 [
-  { "day": 1, "meals": ["Bữa sáng ăn: Cháo bí đỏ thịt gà - Giàu vitamin A, dễ tiêu", "Bữa tối ăn: Súp cà rốt thịt bò - Cung cấp sắt và protein"] },
-  { "day": 2, "meals": ["Bữa sáng ăn: Cháo cá hồi rau củ - Giàu omega-3 giúp phát triển não", "Bữa tối ăn: Bánh khoai tây hấp - Giúp bé tập nhai"] },
+  { "day": 1, "meals": ["Bữa sáng: Cháo bí đỏ thịt gà - Giàu vitamin A, dễ tiêu", "Bữa tối: Súp cà rốt thịt bò - Cung cấp sắt và protein"] },
+  { "day": 2, "meals": ["Bữa sáng: Cháo cá hồi rau củ - Giàu omega-3 giúp phát triển não", "Bữa tối: Bánh khoai tây hấp - Giúp bé tập nhai"] },
   ...
-  { "day": 7, "meals": ["Bữa sáng ăn: Cháo yến mạch táo - Tăng chất xơ", "Bữa tối ăn: Cháo rau dền tôm - Cung cấp canxi và sắt"] }
+  { "day": 7, "meals": ["Bữa sáng: Cháo yến mạch táo - Tăng chất xơ", "Bữa tối: Cháo rau dền tôm - Cung cấp canxi và sắt"] }
 ]
 `;
 
@@ -286,13 +287,13 @@ Ví dụ mẫu:
         } catch (err) {
             console.warn("⚠️ Không thể gọi Gemini, fallback dữ liệu mẫu:", err.message);
             aiText = JSON.stringify([
-                { day: 1, meals: ["Bữa sáng ăn Cháo bí đỏ thịt bò", "Bữa tối ăn Súp khoai lang cá hồi"] },
-                { day: 2, meals: ["Bữa sáng ăn Cháo cà rốt thịt gà", "Bữa tối ăn Cháo yến mạch chuối"] },
-                { day: 3, meals: ["Bữa sáng ăn Cháo rau củ cá thu", "Bữa tối ăn Cháo khoai tây trứng"] },
-                { day: 4, meals: ["Bữa sáng ăn Cháo tôm rau dền", "Bữa tối ăn Súp bí xanh"] },
-                { day: 5, meals: ["Bữa sáng ăn Cháo cá lóc cà rốt", "Bữa tối ăn Cháo bí đỏ thịt heo"] },
-                { day: 6, meals: ["Bữa sáng ăn Cháo yến mạch táo", "Bữa tối ăn Cháo rau bina trứng"] },
-                { day: 7, meals: ["Bữa sáng ăn Cháo tôm khoai lang", "Bữa tối ăn Súp rau củ nghiền"] },
+                { day: 1, meals: ["Bữa sáng: Cháo bí đỏ thịt bò", "Bữa tối: Súp khoai lang cá hồi"] },
+                { day: 2, meals: ["Bữa sáng: Cháo cà rốt thịt gà", "Bữa tối: Cháo yến mạch chuối"] },
+                { day: 3, meals: ["Bữa sáng: Cháo rau củ cá thu", "Bữa tối: Cháo khoai tây trứng"] },
+                { day: 4, meals: ["Bữa sáng: Cháo tôm rau dền", "Bữa tối: Súp bí xanh"] },
+                { day: 5, meals: ["Bữa sáng: Cháo cá lóc cà rốt", "Bữa tối: Cháo bí đỏ thịt heo"] },
+                { day: 6, meals: ["Bữa sáng: Cháo yến mạch táo", "Bữa tối: Cháo rau bina trứng"] },
+                { day: 7, meals: ["Bữa sáng: Cháo tôm khoai lang", "Bữa tối: Súp rau củ nghiền"] },
             ]);
         }
 
@@ -348,8 +349,8 @@ Ví dụ mẫu:
                 suggestions = Array.from({ length: 7 }).map((_, i) => ({
                     day: i + 1,
                     meals: [
-                        `Bữa sáng ăn Món sáng ${i + 1}`,
-                        `Bữa tối ăn Món tối ${i + 1}`,
+                        `Bữa sáng: Món sáng ${i + 1}`,
+                        `Bữa tối: Món tối ${i + 1}`,
                     ],
                 }));
             }
@@ -364,7 +365,7 @@ Ví dụ mẫu:
             suggestions = Array.from({ length: 7 }).map((_, i) => ({
                 day: i + 1,
                 meals: [
-                    `Bữa sáng ăn Món sáng ${i + 1}`,
+                    `Bữa sáng Món sáng ${i + 1}`,
                     `Bữa tối ăn Món tối ${i + 1}`,
                 ],
             }));
@@ -974,7 +975,7 @@ exports.getCategoriesAndProducts = async (req, res) => {
 // Lấy danh sách set
 exports.getSets = async (req, res) => {
     try {
-        const sets = await Set.find();
+        const sets = await Set.find().sort({ createdAt: -1 });
         res.json({ success: true, data: sets });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
