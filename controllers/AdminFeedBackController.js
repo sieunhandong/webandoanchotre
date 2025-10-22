@@ -3,7 +3,7 @@ const Feedback = require("../models/Feedback");
 exports.getAllFeedbacks = async (req, res) => {
   try {
     const feedbacks = await Feedback.find()
-      .populate("book", "title") // Lấy tiêu đề sách
+      .populate("book", "title")
       .populate("user", "name") // Lấy tên user
       .sort({ createdAt: -1 }); // Sắp xếp theo thời gian mới nhất
 
