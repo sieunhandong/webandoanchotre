@@ -38,7 +38,7 @@ const sendEmail = async (email, data, type) => {
                 : `Chào bạn,\n\nMã OTP của bạn là: ${data.otp}\nMã này sẽ hết hạn sau 5 phút.\n\nVui lòng không chia sẻ mã này với bất kỳ ai.\nNếu bạn không yêu cầu mã này, vui lòng thay đổi mật khẩu ngay lập tức.\n\nTrân trọng,\nTinnyYummy`,
         });
 
-        console.log("✅ Email sent:", response);
+        // console.log("✅ Email sent:", response);
     } catch (error) {
         console.error("❌ Lỗi gửi email:", error);
     }

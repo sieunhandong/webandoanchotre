@@ -50,7 +50,7 @@ const sendEmail = async (email, data, type) => {
 
 
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Email sent successfully:", info.messageId);
+    // console.log("✅ Email sent successfully:", info.messageId);
     return info; // 👈 thêm dòng này để getPaymentReturn log được
   } catch (error) {
     console.error("❌ Lỗi khi gửi email:", {

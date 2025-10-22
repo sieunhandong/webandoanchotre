@@ -268,8 +268,6 @@ Ví dụ mẫu:
 ]
 `;
 
-        console.log(prompt);
-
         let aiText = "";
         let suggestions = [];
 
@@ -661,7 +659,6 @@ exports.getPaymentReturn = async (req, res) => {
         }
 
         const orderCode = match[0];
-        console.log("✅ Trích xuất orderCode:", orderCode);
 
         // ✅ 4. Tìm đơn hàng theo orderCode
         const order = await Order.findOne({ orderCode });
@@ -713,8 +710,8 @@ exports.getPaymentReturn = async (req, res) => {
                 },
                 "orderConfirmation"
             );
-            console.log("📧 Mail sent:", info.messageId);
-            console.log(`📧 Email xác nhận thanh toán đã gửi tới ${user.email}`);
+            // console.log("📧 Mail sent:", info.messageId);
+            // console.log(`📧 Email xác nhận thanh toán đã gửi tới ${user.email}`);
         } catch (mailError) {
             console.error("❌ Lỗi gửi email:", mailError);
         }

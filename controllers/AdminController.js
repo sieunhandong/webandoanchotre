@@ -317,8 +317,6 @@ Yêu cầu:
   ...
 ]
 `;
-
-    console.log(prompt);
     // --- Gọi AI ---
     let aiText = "";
     let suggestions = [];
