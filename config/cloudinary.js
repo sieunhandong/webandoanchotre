@@ -1,31 +1,40 @@
-require("dotenv").config(); // Load biến môi trường từ .env
+require("dotenv").config();
 
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
 
-// 1. Cấu hình cloudinary với biến môi trường
+// 1. Cấu hình cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 2. Cấu hình storage cho multer sử dụng Cloudinary
+// 2. Cấu hình Cloudinary storage
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "books", // thư mục Cloudinary (có thể thay đổi)
+    folder: "books",
     allowed_formats: ["jpg", "jpeg", "png", "webp"],
-    transformation: [{ width: 800, crop: "scale" }], // Resize về 800px
+    transformation: [{ width: 800, crop: "scale" }],
   },
 });
 
-// 3. Tạo middleware multer dùng cho upload nhiều file
-const uploadMultiple = multer({ storage }).array("images", 5); // tối đa 5 ảnh, field name là 'images'
+// 3. Cấu hình Multer + giới hạn text field
+const uploadMultiple = multer({
+  storage,
+  limits: {
+    fieldSize: 10 * 1024 * 1024, // Cho phép text (content) tối đa 10MB
+  },
+}).array("images", 5);
 
-// Nếu muốn upload 1 ảnh:
-const uploadSingle = multer({ storage }).single("image");
+const uploadSingle = multer({
+  storage,
+  limits: {
+    fieldSize: 10 * 1024 * 1024,
+  },
+}).single("image");
 
 module.exports = {
   cloudinary,

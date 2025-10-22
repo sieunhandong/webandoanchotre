@@ -132,7 +132,7 @@ router.get(
 //blog
 router.post("/blog/", checkAuthorize(["admin"]), uploadMultiple, BlogController.createBlog);
 
-router.put("/blog/:id", checkAuthorize(["admin"]), BlogController.updateBlog);
+router.put("/blog/:id", checkAuthorize(["admin"]), uploadMultiple, BlogController.updateBlog);
 
 router.delete("/blog/:id", checkAuthorize(["admin"]), BlogController.deleteBlog);
 router.get("/blog/", BlogController.getAllBlogsByAdmin);

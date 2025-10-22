@@ -8,6 +8,7 @@ router.get("/main-categories", BlogController.getBlogsByMainCategories);
 
 router.get("/by-category", BlogController.getBlogsByCategory);
 router.get("/category", BlogController.getAllCategories);
+router.get("/category-main", BlogController.getAllCategoriesTruMain);
 router.get("/:id", BlogController.getBlogById);
 
 

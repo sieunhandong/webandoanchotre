@@ -68,20 +68,29 @@ const updateBlog = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content, blogCategoryId } = req.body;
+    const imageUrls = req.files?.map(file => file.path) || [];
 
+    // Lấy blog cũ
+    const blog = await Blog.findById(id);
+    if (!blog) return res.status(404).json({ message: "Không tìm thấy bài viết" });
+
+    // Nếu không có ảnh mới thì giữ nguyên ảnh cũ
+    const updatedImages = imageUrls.length > 0 ? imageUrls : blog.images;
+
+    // Cập nhật
     const updated = await Blog.findByIdAndUpdate(
       id,
-      { title, content, blogCategoryId },
+      { title, content, blogCategoryId, images: updatedImages },
       { new: true }
     );
 
-    if (!updated) return res.status(404).json({ message: "Không tìm thấy bài viết" });
-
     res.status(200).json({ message: "Cập nhật thành công", blog: updated });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Xóa blog
 const deleteBlog = async (req, res) => {
@@ -116,9 +125,9 @@ const getBlogsByMainCategories = async (req, res) => {
   try {
     // 3 category chính theo tên
     const mainCategoryNames = [
-      "Ăn dặm truyền thống",
-      "Ăn dặm BLW",
-      "Ăn dặm kiểu Nhật"
+      "Ăn Dặm Truyền Thống",
+      "Ăn Dặm Tự Chỉ Huy (BLW)",
+      "Ăn Dặm Kiểu Nhật"
     ];
 
     // Lấy query params từ client
@@ -171,7 +180,6 @@ const getBlogsByMainCategories = async (req, res) => {
   }
 };
 
-// Lấy tất cả blog (cho trang Blog chính) với phân trang + filter category
 const getAllBlogs = async (req, res) => {
   try {
     let { page = 1, limit = 9, blogCategoryId, search } = req.query;
@@ -180,9 +188,33 @@ const getAllBlogs = async (req, res) => {
 
     const filter = {};
 
-    if (blogCategoryId) filter.blogCategoryId = blogCategoryId;
-    if (search) filter.title = { $regex: search, $options: "i" }; // tìm kiếm theo title
+    // Nếu có blogCategoryId thì chỉ lấy theo danh mục đó
+    if (blogCategoryId) {
+      filter.blogCategoryId = blogCategoryId;
+    } else {
+      // Nếu KHÔNG chỉ định category cụ thể, loại trừ 3 category sau
+      const excludeCategories = await BlogCategory.find({
+        name: {
+          $in: [
+            "Ăn Dặm Truyền Thống",
+            "Ăn Dặm Tự Chỉ Huy (BLW)",
+            "Ăn Dặm Kiểu Nhật",
+          ],
+        },
+      }).select("_id");
 
+      const excludeIds = excludeCategories.map((c) => c._id);
+
+      // Loại trừ 3 category này
+      filter.blogCategoryId = { $nin: excludeIds };
+    }
+
+    // 2️⃣ Thêm điều kiện tìm kiếm tiêu đề
+    if (search) {
+      filter.title = { $regex: search, $options: "i" };
+    }
+
+    // 3️⃣ Đếm tổng số kết quả
     const total = await Blog.countDocuments(filter);
 
     const blogs = await Blog.find(filter)
@@ -228,6 +260,24 @@ const getAllCategories = async (req, res) => {
     res.status(500).json({ message: "Lỗi server!", error: error.message });
   }
 }
+const getAllCategoriesTruMain = async (req, res) => {
+  try {
+    const excludeNames = [
+      "Ăn Dặm Truyền Thống",
+      "Ăn Dặm Tự Chỉ Huy (BLW)",
+      "Ăn Dặm Kiểu Nhật",
+    ];
+
+    // Lấy tất cả danh mục ngoại trừ 3 cái trên
+    const blogCategories = await BlogCategory.find({
+      name: { $nin: excludeNames },
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(blogCategories);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server!", error: error.message });
+  }
+};
 
 module.exports = {
   createBlog,
@@ -239,5 +289,6 @@ module.exports = {
   getBlogsByMainCategories,
   getAllBlogs,
   getBlogsByCategory,
-  getAllCategories
+  getAllCategories,
+  getAllCategoriesTruMain
 };
