@@ -27,7 +27,7 @@ exports.getProductById = async (req, res) => {
 // 🥦 Tạo sản phẩm mới
 exports.createProduct = async (req, res) => {
   try {
-    const { name, category, nutrition, description } = req.body;
+    const { name, category } = req.body;
 
     // Kiểm tra dữ liệu đầu vào
     if (!name) {
@@ -47,8 +47,6 @@ exports.createProduct = async (req, res) => {
     const newProduct = new Product({
       name,
       category,
-      nutrition,
-      description,
       image: imageUrls.length > 0 ? imageUrls[0] : null, // nếu có nhiều ảnh, bạn có thể lưu mảng
     });
 
@@ -168,13 +166,26 @@ exports.updateCategory = async (req, res) => {
 
 exports.deleteCategory = async (req, res) => {
   try {
-    const deletedCategory = await Category.findByIdAndDelete(req.params.id);
-    if (!deletedCategory)
+    const categoryId = req.params.id;
+
+    // 1️⃣ Kiểm tra danh mục có tồn tại không
+    const category = await Category.findById(categoryId);
+    if (!category) {
       return res.status(404).json({ message: "Không tìm thấy danh mục" });
-    res.status(200).json({ message: "Danh mục đã được xóa" });
+    }
+
+    // 2️⃣ Xóa tất cả sản phẩm thuộc danh mục đó
+    await Product.deleteMany({ category: categoryId });
+
+    // 3️⃣ Xóa danh mục
+    await Category.findByIdAndDelete(categoryId);
+
+    res.status(200).json({ message: "Danh mục và các sản phẩm liên quan đã được xóa" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Lỗi khi xóa danh mục", error: error.message });
+    console.error(error);
+    res.status(500).json({
+      message: "Lỗi khi xóa danh mục",
+      error: error.message,
+    });
   }
 };
