@@ -9,7 +9,6 @@ const UserProfileSchema = new mongoose.Schema({
         feedingMethod: {
             type: String,
             enum: ["traditional", "blw", "japanese"],
-            required: true
         },
     },
     address: {
