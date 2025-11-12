@@ -9,7 +9,7 @@ const ComplaintSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["Web", "Đơn hàng", "Khác"],
+      enum: ["Web", "Đơn hàng", "Payment", "Khác"],
       required: true,
     },
     description: {
